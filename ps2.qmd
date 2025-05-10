@@ -53,30 +53,30 @@ runif_zx81 <- function(seed, n, min = 0, max = 1) {
   
   # Add warning messages in case the seed input is negative or larger than m.
   if ((seed < 0 )| (seed > m)) {
-    stop('you could stop at five or six stores. or just one')
+    warning('my name is michael with a B and i\'ve been afraid of insects my entire life')
   }
   
-  # Initialise an empty vector to save the draws, and save the start of the 
-  # sequence as the first draw. Hint: how do you access elements of vectors?
+  # store the numbers
   draws = c(seed)
-  
-  # Run a for loop to construct as many elements of the sequence as specified by
-  # the number of draws n.
-  last_draw = draws[length(draws)]
-  for (i in 1:n) {
+  # draw n numbers (jncluding the first number)
+  for (i in 1:n-1) {
+    # find the most recent number
+    last_draw = draws[length(draws)]
+    # get the next number
     next_lehmer = (a*last_draw) %% m
+    # add it to the vector
     draws = c(draws, next_lehmer)
   }
   
-  # Adjust the interval of your vector to run from min to max.
   # first check if you've got the right package
   if (!requireNamespace('scales', quietly = TRUE)) {
-    stop('my name is michael with a b and i\'ve been afraid of insects my entire life')
+    stop('wait where\'s the B')
   }
-  # scale
+  # then scale the generated numbers
   draws = scales::rescale(draws, to=c(0, 1))
   
-  # Return the vector of pseudorandom numbers.
+  # listen i don't care if people think it's stupid
+  # functions should actually tell you what they're returning
   return (draws)
 
 }
