@@ -1,0 +1,89 @@
+---
+title: "Core ERM Problem Set 2"
+format: html
+editor: visual
+---
+
+```{r message=FALSE}
+library('scales')
+library('dplyr')
+library('purrr')
+
+# set seed
+seed = 42
+set.seed(seed)
+
+# set parameters
+a = 75
+m = 2^16 + 1
+```
+
+## a)
+slayyyyyyy $\displaystyle X_{k+1}=a\cdot X_{k}{\bmod {m}}$
+
+```{r}
+# print next element
+# so X_0 is the seed?
+X1 = (a*seed) %% m
+print (X1)
+```
+
+## b)
+
+```{r}
+# rescale the thing
+
+Lehmer_seq <- c(42, 3150, 39639, 23760, 12501, 20057)
+
+# scaled to [0,1]
+Lehmer_seq_norm = rescale(Lehmer_seq, to=c(0, 1))
+
+# scaled to [3,5]
+Lehmer_seq_norm3 = rescale(Lehmer_seq, to=c(3, 5))
+```
+
+## c)
+
+```{r}
+runif_zx81 <- function(seed, n, min = 0, max = 1) {
+  
+  # Set the a and m parameters as specified.
+  a = 75
+  m = 2^16 + 1
+  
+  # Add warning messages in case the seed input is negative or larger than m.
+  if ((seed < 0 )| (seed > m)) {
+    stop('you could stop at five or six stores. or just one')
+  }
+  
+  # Initialise an empty vector to save the draws, and save the start of the 
+  # sequence as the first draw. Hint: how do you access elements of vectors?
+  draws = c(seed)
+  
+  # Run a for loop to construct as many elements of the sequence as specified by
+  # the number of draws n.
+  last_draw = draws[length(draws)]
+  for (i in 1:n) {
+    next_lehmer = (a*last_draw) %% m
+    draws = c(draws, next_lehmer)
+  }
+  
+  # Adjust the interval of your vector to run from min to max.
+  # first check if you've got the right package
+  if (!requireNamespace('scales', quietly = TRUE)) {
+    stop('my name is michael with a b and i\'ve been afraid of insects my entire life')
+  }
+  # scale
+  draws = scales::rescale(draws, to=c(0, 1))
+  
+  # Return the vector of pseudorandom numbers.
+  return (draws)
+
+}
+```
+
+```{r}
+runif_zx81(seed=42, n=6)
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
