@@ -446,7 +446,7 @@ wells = wells |>
   # since arsenic > 0.5 we don't have to worry about taking log(0) of anything
   mutate(larsenic = log(arsenic)) |>
   # create 
-  mutate(dist1000 = dist / 100) |>
+  mutate(dist100 = dist / 100) |>
   mutate(zeduc = (educ - mean(educ, na.rm=TRUE)) / sd(educ, na.rm = TRUE))
 
 ```
@@ -473,6 +473,14 @@ ggplot(wells, aes(x=larsenic)) +
 )
 ```
 
-The distribution is very right-skewed. Most wells in the data are close to the safe/unsafe threshold. On the log scale,
+The distribution is very right-skewed (although this doesn't show as much on the log scale since the log values are closer together). Most wells in the data are close to the safe/unsafe threshold.
+
+## 2.
+### a)
+```{r}
+
+fit1 <- glm(switch ~ dist100, data=wells, family='binomial')
+
+```
 
 # NSW
