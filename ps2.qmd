@@ -6,19 +6,41 @@ editor: visual
 
 ```{r message=FALSE}
 library('scales')
-library('dplyr')
+library('tidyverse')
 library('purrr')
+library('EnvStats')
+library('broom')
+library('GGally')
+library('stargazer')
+
+# import data
+football = read_csv('https://ditraglia.com/data/fair_football.csv')
+wells = read_csv('https://ditraglia.com/data/wells.csv')
 
 # set seed
 seed = 42
 set.seed(seed)
 
 # set parameters
+alpha = 0.05
 a = 75
 m = 2^16 + 1
+computer_rankings = c('MAT', 'SAG', 'BIL', 'COL', 'MAS', 'DUN')
+
+# function(s)
+
+# calculating mean squared error using regression residuals
+get_MSE = function(regression_output) {
+  return(mean(residuals(regression_output)^2))
+}
 ```
 
-## a)
+# Monte Carlo
+
+## 1.
+
+### a)
+
 slayyyyyyy $\displaystyle X_{k+1}=a\cdot X_{k}{\bmod {m}}$
 
 ```{r}
@@ -28,7 +50,7 @@ X1 = (a*seed) %% m
 print (X1)
 ```
 
-## b)
+### b)
 
 ```{r}
 # rescale the thing
@@ -42,24 +64,21 @@ Lehmer_seq_norm = rescale(Lehmer_seq, to=c(0, 1))
 Lehmer_seq_norm3 = rescale(Lehmer_seq, to=c(3, 5))
 ```
 
-## c)
+### c)
 
 ```{r}
-runif_zx81 <- function(seed, n, min = 0, max = 1) {
-  
-  # Set the a and m parameters as specified.
-  a = 75
-  m = 2^16 + 1
+# simulate standard (independent) uniform draws
+runif_zx81 <- function(seed, n, a=75, m=2^16 + 1, min=0, max=1) {
   
   # Add warning messages in case the seed input is negative or larger than m.
   if ((seed < 0 )| (seed > m)) {
-    warning('my name is michael with a B and i\'ve been afraid of insects my entire life')
+    warning('uh yeah i sure hope it does')
   }
   
   # store the numbers
   draws = c(seed)
-  # draw n numbers (jncluding the first number)
-  for (i in 1:n-1) {
+  # draw n numbers (including the first number)
+  for (i in 1:(n-1)) {
     # find the most recent number
     last_draw = draws[length(draws)]
     # get the next number
@@ -70,7 +89,7 @@ runif_zx81 <- function(seed, n, min = 0, max = 1) {
   
   # first check if you've got the right package
   if (!requireNamespace('scales', quietly = TRUE)) {
-    stop('wait where\'s the B')
+    stop('road work ahead')
   }
   # then scale the generated numbers
   draws = scales::rescale(draws, to=c(0, 1))
@@ -82,8 +101,378 @@ runif_zx81 <- function(seed, n, min = 0, max = 1) {
 }
 ```
 
+### d)
+
 ```{r}
-runif_zx81(seed=42, n=6)
+# 1000 numbers
+draw1000 = runif_zx81(seed=42, n=1000)
+
+# get a tibble
+draw1000_df = mutate(tibble(draw1000), n = row_number())
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+View a histogram: looks pretty uniform since the frequencies are pretty similar for all the possible value.
+
+```{r}
+hist(draw1000)
+```
+
+View a QQ plot: I think if it lines up with the 45-degree line it's supposed to match the distribution set in the parameters so this one looks fine
+
+```{r}
+# this one is from envstats
+qqPlot(draw1000, distribution='unif', param.list=list(min=0, max=1))
+```
+
+View a time series plot: all values are between 0 and 1
+
+```{r}
+ggplot(draw1000_df, aes(x=n, y=draw1000)) +
+  geom_line()
+```
+
+These all suggest a uniform distribution.
+
+## 2.
+
+### a)
+
+```{r, tidy=FALSE, eval=FALSE, highlight=FALSE}
+
+rnorm_zx81 = function(seed, n, mean, sd) {
+  
+  # get two standard uniform vectors using runif_zx81()
+  # just run it once with n/2 draws and split it in half
+  # or (n+1)/2 draws if n is odd
+  
+  # do the box transform to get R and theta
+  
+  # use R and theta to get Z1 and Z2
+  
+  # combine z1 and z2 into one vector and return it
+  # or return the first n elements if n is odd
+}
+
+```
+
+### b)
+
+```{r}
+# have to assume these are iid
+unif_seq <- c(0.5600805, 0.5767570, 0.8858708, 0.9313472, 0.7665961, 0.9763004)
+
+mean = 2
+sd = 0.5
+
+# take the first three
+U1 = unif_seq[1:(length(unif_seq)/2)]
+# take the remaining
+U2 = unif_seq[! unif_seq %in% U1]
+
+# transformation
+Z1 = sqrt(-2 * log(U1)) * cos(2 * pi * U2)
+Z2 = sqrt(-2 * log(U1)) * sin(2 * pi * U2)
+# combine
+Z = c(Z1, Z2)
+
+# scale them from standard normal
+# multiply by sd means that the variance is sd^2
+Z = Z*sd + mean
+
+```
+
+### c)
+
+```{r}
+rnorm_zx81 = function(seed, n, mean=0, sd=1) {
+  # handle the even and odd thing
+  if (n%%2 == 0) {
+    U = runif_zx81(seed=seed, n=n)
+  } else(
+    U = runif_zx81(seed=seed, n=n+1)
+  )
+  
+  # split the draw in half
+  U1 = U[1:(length(U)/2)]
+  U2 = U[! U %in% U1]
+  
+  # transformation
+  Z1 = sqrt(-2 * log(U1)) * cos(2 * pi * U2)
+  Z2 = sqrt(-2 * log(U1)) * sin(2 * pi * U2)
+  
+  # combine them
+  Z = c(Z1, Z2)
+  # scale
+  Z = Z*sd + mean
+  
+  return (Z[1:n])
+}
+```
+
+try it out:
+
+```{r}
+mynormals = rnorm_zx81(seed=42, n=1000)
+
+# get a tibble
+mynormals_df = mutate(tibble(mynormals), n=row_number())
+```
+
+View a histogram: this does look like a slightly skewed normal density
+
+```{r}
+hist(mynormals)
+```
+
+View a QQ plot: roughly 45-degree line
+
+```{r}
+# use the stats package one
+qqnorm(mynormals)
+qqline(mynormals) 
+```
+
+View a time series plot: values are centered at 0
+
+```{r}
+ggplot(mynormals_df, aes(x=n, y=mynormals)) +
+  geom_line()
+```
+
+These look like the data is standard normal
+
+## 3.
+
+```{r}
+draw1000_again = runif_zx81(seed=42, n=1000, a=66, m=401)
+
+# take the odd elements
+odds <- draw1000_again[seq(1, length(draw1000_again), by=2)]
+# take the even elements
+evens <- draw1000_again[seq(2, length(draw1000_again), by=2)]
+
+plot(odds, evens)
+```
+
+The pattern doesn't look random since they're all lying on a bunch of parallel lines. This corresponds to the result in (Marsaglia, 1968) when applied to 2-dimensional space.
+
+# Football
+
+## 1.
+
+First, we see that H == 1 (games where team A is the home team) have a higher mean SPREAD. When H == -1 (games where team B is the home team) have a lower mean SPREAD (so team B scores). Since SPREAD comes from the difference between team A's score and team B's score, we see that team A scores relative more when they are the home team (and vice versa). This shows that there is a home game advantage.
+
+```{r}
+# home team advantage
+football |>
+  # look at value of SPREAD for H == 1 vs H == -1
+  group_by(H) |>
+  summarise(mean_SPREAD = mean(SPREAD, na.rm = TRUE))
+```
+
+Test of sample means:
+
+```{r}
+# subset of data
+spread_home_A = football$SPREAD[football$H == 1]
+spread_home_B = football$SPREAD[football$H == -1]
+
+# test of sample means
+t.test(spread_home_A, spread_home_B, 
+       alternative='two.sided', var.equal=FALSE)
+```
+
+## 2.
+
+It's because SPREAD is a difference between team A and team B and you're not expectng there to be a difference between the two teams when neither one is doing a home game
+
+## 3.
+
+We reject the null hypothesis that the true coefficient for H is zero. The coefficient is interpreted as the increase in SPREAD for a one-unit increase in H, so as H goes from a team B home game (where team B has the advantage), to a nobody home game (where no one has the advantage), to a team A home game (where team A has the advantage), team A scores relatively more. Going from H == -1 to H == 1 is a two unit increase in H and represents going from a team B home game to a team A home game.
+
+```{r}
+# use H to predict SPREAD with no intercept
+m3 = lm(SPREAD ~ 0 + H, data = football)
+
+tidy(m3)
+```
+
+## 4.
+
+In the pairs plot, all the different types of ranking system differences and the win-loss record are correlated with each other. The correlations all look linear.
+
+```{r}
+# pairs plot
+pairs(football[c(computer_rankings, 'REC')])
+```
+
+It's easier to see these things with the plot of correlations. We can see that MAT, SAG, and MAS are very highly correlated with each other
+
+```{r}
+cor(football[, c(computer_rankings, 'REC')])
+```
+
+## 5.
+
+Test the null hypothesis that the coefficient on MAT, SAG, BIL, COL, MAS, or DUN is zero at the 5% level. In the model with everything, we can see that the coefficients of MAT, COL, and MAS are not significant. I feel like to properly do this question there are way too many possible orderings to remove the predictors in. If you remove them one by one, different predictors may become non-significant in those regressions. I'm just removing them in order of largest P-value. I'm eventually going with the model that uses H, REC, SAG, BIL, COL and DUN.
+
+```{r}
+# use H, REC, and all computer predictors to predict SPREAD with no intercept
+m5 = lm(SPREAD ~ 0 + H + REC + MAT + SAG + BIL + COL + MAS + DUN, 
+                     data=football)
+
+tidy(m5)
+
+```
+
+Removing MAS...
+
+```{r}
+# use H, REC, and all computer predictors to predict SPREAD with no intercept
+# remove MAS
+m5rMAS = lm(SPREAD ~ 0 + H + REC + MAT + SAG + BIL + COL + DUN, 
+                      data=football)
+
+tidy(m5rMAS)
+
+```
+
+Removing MAS and MAT...
+
+```{r}
+# use H, REC, and all computer predictors to predict SPREAD with no intercept
+# remive MAS and MAT
+m5rMASMAT = lm(SPREAD ~ 0 + H + REC + SAG + BIL + COL + DUN, 
+                         data=football)
+
+tidy(m5rMASMAT)
+
+```
+
+Finding the best individual predictor: want the best (lowest) MSE predictor like when training a regression model in machine learning
+
+```{r}
+# save MSEs
+MSE_values = c()
+for (i in computer_rankings) {
+  data = football[c('SPREAD', i)]
+  # use the string but as an argument when it's not a string u know what i mean?
+  model = lm(as.formula(paste0('SPREAD ~ 0 + ', i)) , data=data)
+  # add to all MSE
+  MSE_values = c(MSE_values, get_MSE(model))
+}
+
+print(tibble(ranking=computer_rankings, MSE=MSE_values))
+```
+
+Now, compare this to the model I chose: you can get a lower MSE using H, REC, SAG, BIL, COL, and DUN compared to any of the six individual predictors
+
+```{r}
+print(min(MSE_values) > get_MSE(m5rMASMAT))
+```
+
+## 6.
+
+Include REC, DUN, COL, BIL, and one of MAT/SAG/MAS since those three are very highly correlated. The regression coefficient on LV is the only one significantly different from zero at the 5% level
+
+```{r}
+m6 = lm(SPREAD ~ 0 + H + LV + MAT + REC + BIL + COL + DUN, 
+                         data=football)
+
+tidy(m6)
+
+```
+
+## 7.
+
+LV is an amount that would balance the quantity of bets for and against a given team. If people are betting using all information given to them, all of the other stuff should already be incorporated into LV. No other variables should help you predict SPREAD beyond just adding LV. The coefficient on LV should be 1 or else you'd be able to profitably deviate from other bets by betting more aggressively with/against the direction of LV.
+
+```{r}
+m7 = lm(SPREAD ~ 0 + LV, data=football)
+
+tidy(m7)
+
+```
+
+Test of the null hypothesis that the true coefficient on LV is 1 at the 5% significance level:
+
+```{r}
+
+# the test statistic
+
+# get the estimated coefficient
+bhat_LV = coef(m7)['LV']
+# get the standard error
+se_LV = summary(m7)$coefficients['LV', 'Std. Error']
+# calculate the test statistic
+t_LV = (bhat_LV - 1) / se_LV
+
+# the critical value
+# get the degrees of freedom
+df_LV = summary(m7)$df[2]
+criticalvalue_alpha = qt((1 - alpha/2), df_LV)
+
+# reject Ho? 
+print(abs(t_LV) > criticalvalue_alpha)
+```
+
+We fail to reject the null hypothesis and conclude that the true coefficient on LV is 1
+
+## 8.
+
+wtf are these warnings
+
+```{r}
+
+stargazer(m3, m5, m5rMAS, m5rMASMAT, m6, m7,
+          type='text', 
+          dep.var.labels='SPREAD',
+          no.space=TRUE,
+          digits=3,
+          notes=c('* p<0.05; ** p<0.01; *** p<0.001'),
+          omit.stat=c('f', 'ser')
+)
+```
+
+# Wells
+
+## 1.
+
+### b), d) and e)
+
+```{r}
+wells = wells |>
+  # create log arsenic level
+  # since arsenic > 0.5 we don't have to worry about taking log(0) of anything
+  mutate(larsenic = log(arsenic)) |>
+  # create 
+  mutate(dist1000 = dist / 100) |>
+  mutate(zeduc = (educ - mean(educ, na.rm=TRUE)) / sd(educ, na.rm = TRUE))
+
+```
+
+### c)
+
+```{r}
+# not log
+ggplot(wells, aes(x=arsenic)) +
+  geom_histogram(bins=30, fill='hotpink', color='purple') +
+  labs(
+    title='Distribution of respondent arsenic levels in wells',
+    x='Arsenic Level (100s of micrograms per liter)',
+    y='Number of observations'
+)
+
+# log
+ggplot(wells, aes(x=larsenic)) +
+  geom_histogram(bins=30, fill='green', color='orange') +
+  labs(
+    title='Distribution of respondent arsenic levels in wells (log)',
+    x='Log Arsenic Level (100s of micrograms per liter)',
+    y='Number of observations'
+)
+```
+
+The distribution is very right-skewed. Most wells in the data are close to the safe/unsafe threshold. On the log scale,
+
+# NSW
