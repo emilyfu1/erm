@@ -351,6 +351,8 @@ tidy(m5rMASMAT)
 
 Finding the best individual predictor: want the best (lowest) MSE predictor like when training a regression model in machine learning
 
+I'm at the drop in session right now and no one else did it like this but this is just how I thought of it since we're looking at prediction quality
+
 ```{r}
 # save MSEs
 MSE_values = c()
@@ -476,10 +478,115 @@ ggplot(wells, aes(x=larsenic)) +
 The distribution is very right-skewed (although this doesn't show as much on the log scale since the log values are closer together). Most wells in the data are close to the safe/unsafe threshold.
 
 ## 2.
+
 ### a)
+
+```{r}
+# regression of switch on dist100
+fit1 = glm(switch ~ dist100, data=wells, family='binomial')
+```
+
+### b)
+
+```{r}
+ggplot(wells, aes(x=dist100, y=switch)) +
+  # regression line
+  stat_smooth(method='glm', method.args=list(family='binomial')) +
+  geom_jitter(width = 0.5, # noise in x-coordinate
+              height = 0.1) # noise in y-coordinate 
+```
+
+### c)
+
+```{r}
+summary(fit1)
+```
+
+Increase in distance from the nearest safe well decreases log odds of changing the well that you use. This makes sense because if you live really far away from the safe well it is harder for you to switch, so the odds ratio decreases.
+
+### d)
+Predicted probability of the average
 ```{r}
 
-fit1 <- glm(switch ~ dist100, data=wells, family='binomial')
+# find the average distance from a safe well
+mean_dist100 = mean(wells$dist100, na.rm=TRUE)
+
+# with type response to get probability
+# it returns a dataframe but there's only one value so i'm getting the value out
+p_switch_meandist = predict(fit1, 
+                               newdata=data.frame(dist100=mean_dist100), 
+                               type='response')[[1]]
+
+print(paste0('probability of the average household: ', p_switch_meandist))
+```
+
+### e)
+
+```{r}
+
+# logit coefficient
+bhat_dist100 = coef(fit1)['dist100']
+
+# marginal effect of average person
+avg_marginal_effect = bhat_dist100 * p_switch_meandist
+print(paste0('average household: ', avg_marginal_effect[[1]]))
+
+# estimated coefficient / 4
+print(paste0('divide-by-four rule: ', estimated_coef[[1]] / 4))
+
+# average of individual marginal effects
+# predict for everyone
+prob_switch_all = predict(fit1, type = 'response')
+# marginal effects for everyone
+marginal_effect_all = bhat_dist100 * prob_switch_all
+# average of this over all obs
+avg_partial_effect = mean(marginal_effect_all, na.rm=TRUE)
+print(paste0('average partial effect: ', avg_partial_effect))
+
+```
+
+## 3.
+
+### a) and b)
+
+```{r}
+
+wells = wells |>
+  # probabilities
+  mutate(p1 = prob_switch_all) |>
+  # make the prediction based on the probabilities
+  mutate(pred1 = ifelse(p1 > 0.5, 1, 0)) |>
+  # check where the prediction is wrong
+  mutate(pred_wrong = ifelse(pred1 != switch, 1, 0))
+
+```
+
+### c)
+
+```{r}
+
+# the proportion of predictions that are wrong
+wells |>
+  summarise(proportion_wrong=mean(pred_wrong))
+
+```
+
+### d)
+
+```{r}
+
+table(pred1 = wells$pred1, switch = wells$switch)
+
+```
+### e)
+sense and sensibility
+```{r}
+
+# sensitivity = true positives / (true positives + false negatives)
+
+
+# specificity = true negatives / (true negatives + false positives)
+
 
 ```
 
