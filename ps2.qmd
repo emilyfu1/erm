@@ -424,7 +424,7 @@ We fail to reject the null hypothesis and conclude that the true coefficient on 
 
 wtf are these warnings
 
-```{r}
+```{r warning=FALSE}
 
 stargazer(m3, m5, m5rMAS, m5rMASMAT, m6, m7,
           type='text', 
@@ -432,8 +432,7 @@ stargazer(m3, m5, m5rMAS, m5rMASMAT, m6, m7,
           no.space=TRUE,
           digits=3,
           notes=c('* p<0.05; ** p<0.01; *** p<0.001'),
-          omit.stat=c('f', 'ser')
-)
+          omit.stat=c('f', 'ser'))
 ```
 
 # Wells
@@ -455,6 +454,7 @@ wells = wells |>
 
 ### c)
 
+Histogram of arsenic levels
 ```{r}
 # not log
 ggplot(wells, aes(x=arsenic)) +
@@ -464,7 +464,9 @@ ggplot(wells, aes(x=arsenic)) +
     x='Arsenic Level (100s of micrograms per liter)',
     y='Number of observations'
 )
-
+```
+Histogram of log arsenic levels
+```{r}
 # log
 ggplot(wells, aes(x=larsenic)) +
   geom_histogram(bins=30, fill='green', color='orange') +
@@ -474,7 +476,6 @@ ggplot(wells, aes(x=larsenic)) +
     y='Number of observations'
 )
 ```
-
 The distribution is very right-skewed (although this doesn't show as much on the log scale since the log values are closer together). Most wells in the data are close to the safe/unsafe threshold.
 
 ## 2.
@@ -487,7 +488,7 @@ fit1 = glm(switch ~ dist100, data=wells, family='binomial')
 ```
 
 ### b)
-
+Logistic regression function for fit1
 ```{r}
 ggplot(wells, aes(x=dist100, y=switch)) +
   # regression line
@@ -502,7 +503,7 @@ ggplot(wells, aes(x=dist100, y=switch)) +
 summary(fit1)
 ```
 
-Increase in distance from the nearest safe well decreases log odds of changing the well that you use. This makes sense because if you live really far away from the safe well it is harder for you to switch, so the odds ratio decreases.
+Increase in distance from the nearest safe well decreases log odds of changing the well that you use. This makes sense because if you live really far away from the safe well it is harder for you to switch, so the odds ratio decreases. This is significant at the 0.1% level.
 
 ### d)
 Predicted probability of the average
@@ -517,7 +518,7 @@ p_switch_meandist = predict(fit1,
                                newdata=data.frame(dist100=mean_dist100), 
                                type='response')[[1]]
 
-print(paste0('probability of the average household: ', p_switch_meandist))
+print(paste0('p(average household switches) = ', p_switch_meandist))
 ```
 
 ### e)
@@ -525,10 +526,10 @@ print(paste0('probability of the average household: ', p_switch_meandist))
 ```{r}
 
 # logit coefficient
-bhat_dist100 = coef(fit1)['dist100']
+bhat_dist100_fit1 = coef(fit1)['dist100']
 
 # marginal effect of average person
-avg_marginal_effect = bhat_dist100 * p_switch_meandist
+avg_marginal_effect = bhat_dist100_fit1 * p_switch_meandist
 print(paste0('average household: ', avg_marginal_effect[[1]]))
 
 # estimated coefficient / 4
@@ -538,7 +539,7 @@ print(paste0('divide-by-four rule: ', estimated_coef[[1]] / 4))
 # predict for everyone
 prob_switch_all = predict(fit1, type = 'response')
 # marginal effects for everyone
-marginal_effect_all = bhat_dist100 * prob_switch_all
+marginal_effect_all = bhat_dist100_fit1 * prob_switch_all
 # average of this over all obs
 avg_partial_effect = mean(marginal_effect_all, na.rm=TRUE)
 print(paste0('average partial effect: ', avg_partial_effect))
@@ -574,20 +575,97 @@ wells |>
 ### d)
 
 ```{r}
-
-table(pred1 = wells$pred1, switch = wells$switch)
-
+confusion = table(pred1 = wells$pred1, switch = wells$switch)
+print(confusion)
 ```
 ### e)
 sense and sensibility
 ```{r}
 
-# sensitivity = true positives / (true positives + false negatives)
+n_true_positives = confusion['1', '1']
+n_true_negatives = confusion['0', '0']
+n_false_positives = confusion['1', '0']
+n_false_negatives = confusion['0', '1']
 
+# sensitivity = true positives / (true positives + false negatives)
+sensitivity = n_true_positives / (n_true_positives + n_false_negatives)
+print(paste0('sensitivity: ', sensitivity))
 
 # specificity = true negatives / (true negatives + false positives)
-
+specificity <- n_true_negatives / (n_true_negatives + n_false_positives)
+print(paste0('specificity: ', specificity))
 
 ```
+
+### f)
+
+```{r}
+# null error rate from guessing the most common one
+switch_values = table(wells$switch)
+print(switch_values)
+```
+
+More observations have switch == 1 than switch == 2. The null error rate would be...
+
+```{r}
+
+null_error = switch_values['1'] / (switch_values['1'] + switch_values['0'])
+print(paste0('null error rate: ', null_error))
+
+```
+
+The regression model and the null prediction have about the same accuracy. The model has low sensitivity, so it isn't good at predicting when someone does switch wells but is better at predicting when someone does not switch. Since the null model always predicts switch == 1, there are no false negatives or true negatives. Its sensitivity and specificity are one and zero, respectively.
+
+## 4.
+
+```{r warning=FALSE}
+
+fit2 = glm(switch ~ larsenic, data=wells, family='binomial')
+fit3 = glm(switch ~ zeduc, data=wells, family='binomial')
+fit4 = glm(switch ~ dist100 +larsenic +zeduc, data=wells, family='binomial')
+
+stargazer(fit1, fit2, fit3, fit4,
+          type='text', 
+          dep.var.labels='SWITCH',
+          no.space=TRUE,
+          digits=3,
+          notes=c('* p<0.05; ** p<0.01; *** p<0.001'),
+          omit.stat=c('f', 'ser'))
+
+```
+
+## 5. 
+
+### a)
+Logistic regression function for fit2
+```{r}
+ggplot(wells, aes(x=dist100, y=switch)) +
+  # regression line
+  stat_smooth(method='glm', method.args=list(family='binomial')) +
+  geom_jitter(width = 0.5, # noise in x-coordinate
+              height = 0.1) # noise in y-coordinate 
+```
+
+```{r}
+summary(fit2)
+```
+
+Increase in log arsenic level above the safe threshold increases log odds of changing the well that you use. This makes sense because higher arsenic levels (and hence higher log arsenic levels since it is an increasing transformation) are and probably are perceived to be more threatening to the well users and they'd be more likely to switch (less likely to stay using the same one). The farther the level of arsenic rises above the safe level, the odds of switching to safe ones increase. This is significant at the 0.1% level.
+
+### b)
+Logistic regression function for fit3
+```{r}
+ggplot(wells, aes(x=zeduc, y=switch)) +
+  # regression line
+  stat_smooth(method='glm', method.args=list(family='binomial')) +
+  geom_jitter(width = 0.5, # noise in x-coordinate
+              height = 0.1) # noise in y-coordinate 
+```
+
+```{r}
+summary(fit3)
+```
+
+Increase in a year of education level of the head of the household increases log odds of changing the well that you use. If they have more education, they are more likely to learn about the dangers of arsenic contamination to health and get their families to change to a safe well. This is significant at the 0.1% level.
 
 # NSW
