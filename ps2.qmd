@@ -5,17 +5,20 @@ editor: visual
 ---
 
 ```{r message=FALSE}
-library('scales')
-library('tidyverse')
-library('purrr')
-library('EnvStats')
-library('broom')
-library('GGally')
-library('stargazer')
+library(scales)
+library(tidyverse)
+library(purrr)
+library(EnvStats)
+library(broom)
+library(GGally)
+library(stargazer)
+library(haven)
 
 # import data
 football = read_csv('https://ditraglia.com/data/fair_football.csv')
 wells = read_csv('https://ditraglia.com/data/wells.csv')
+experimental = read_dta('https://users.nber.org/~rdehejia/data/nsw.dta')
+controls = read_dta('https://users.nber.org/~rdehejia/data/cps_controls.dta')
 
 # set seed
 seed = 42
@@ -33,6 +36,46 @@ computer_rankings = c('MAT', 'SAG', 'BIL', 'COL', 'MAS', 'DUN')
 get_MSE = function(regression_output) {
   return(mean(residuals(regression_output)^2))
 }
+
+# wells partial effects and stuff
+logit_effects = function(fit, predictor) {
+  # grab the data that's still stored in fit
+  data = model.frame(fit)
+  
+  # find the characteristics of the average person in the data
+  mean_data = as.data.frame(lapply(data, function(x) mean(x, na.rm = TRUE)))
+  
+  # predicted probability of switch at the mean
+  fakeperson = predict(fit, newdata=mean_data)[[1]]
+  p_avg = dlogis(fakeperson)
+  
+  # estimated logit coefficient of the predictor
+  bhat = coef(fit)[[predictor]]
+  
+  # marginal effect at the average
+  MEA = bhat * p_avg
+  
+  # divide-by-4 rule thing
+  div4 = bhat / 4
+  
+  # average partial effect
+  p_all = predict(fit, type='response')
+  APE = mean(bhat * p_all, na.rm=TRUE)
+  
+  # return everything
+  return(list(
+    mean_pred=mean_data[[predictor]],
+    probability_at_mean=p_avg,
+    coefficient=bhat,
+    marginal_effect_average=MEA,
+    divide_by_4=div4,
+    predicted_probabilities = p_all,
+    average_partial_effect=APE
+  ))
+}
+
+# data cleaning
+
 ```
 
 # Monte Carlo
@@ -506,19 +549,22 @@ summary(fit1)
 Increase in distance from the nearest safe well decreases log odds of changing the well that you use. This makes sense because if you live really far away from the safe well it is harder for you to switch, so the odds ratio decreases. This is significant at the 0.1% level.
 
 ### d)
+
+```{r}
+# my function that basically does everything lol
+logit_effects_fit1 = logit_effects(fit1, 'dist100')
+
+```
+
 Predicted probability of the average
 ```{r}
-
 # find the average distance from a safe well
-mean_dist100 = mean(wells$dist100, na.rm=TRUE)
+mean_dist100 = logit_effects_fit1$mean_pred
 
 # with type response to get probability
-# it returns a dataframe but there's only one value so i'm getting the value out
-p_switch_meandist = predict(fit1, 
-                               newdata=data.frame(dist100=mean_dist100), 
-                               type='response')[[1]]
+p_switch_meandist_fit1 = logit_effects_fit1$probability_at_mean
 
-print(paste0('p(average household switches) = ', p_switch_meandist))
+print(paste0('p(average household switches) = ', p_switch_meandist_fit1))
 ```
 
 ### e)
@@ -526,25 +572,24 @@ print(paste0('p(average household switches) = ', p_switch_meandist))
 ```{r}
 
 # logit coefficient
-bhat_dist100_fit1 = coef(fit1)['dist100']
+bhat_dist100_fit1 = logit_effects_fit1$coefficient
 
 # marginal effect of average person
-avg_marginal_effect = bhat_dist100_fit1 * p_switch_meandist
-print(paste0('average household: ', avg_marginal_effect[[1]]))
+marginal_effect_avg_dist100_fit1 = logit_effects_fit1$marginal_effect_average
+print(paste0('marginal effect at average: ', marginal_effect_avg_dist100_fit1))
 
 # estimated coefficient / 4
-print(paste0('divide-by-four rule: ', estimated_coef[[1]] / 4))
+print(paste0('divide-by-four rule: ', bhat_dist100_fit1 / 4))
 
 # average of individual marginal effects
 # predict for everyone
-prob_switch_all = predict(fit1, type = 'response')
-# marginal effects for everyone
-marginal_effect_all = bhat_dist100_fit1 * prob_switch_all
-# average of this over all obs
-avg_partial_effect = mean(marginal_effect_all, na.rm=TRUE)
-print(paste0('average partial effect: ', avg_partial_effect))
+p_switch_all_fit1 = logit_effects_fit1$predicted_probabilities
+# average marginal effect
+avg_partial_effect_fit1 = logit_effects_fit1$average_partial_effect
+print(paste0('average partial effect: ', avg_partial_effect_fit1))
 
 ```
+
 
 ## 3.
 
@@ -554,50 +599,48 @@ print(paste0('average partial effect: ', avg_partial_effect))
 
 wells = wells |>
   # probabilities
-  mutate(p1 = prob_switch_all) |>
+  mutate(p1 = p_switch_all_fit1) |>
   # make the prediction based on the probabilities
   mutate(pred1 = ifelse(p1 > 0.5, 1, 0)) |>
   # check where the prediction is wrong
-  mutate(pred_wrong = ifelse(pred1 != switch, 1, 0))
+  mutate(pred_wrong_fit1 = ifelse(pred1 != switch, 1, 0))
 
 ```
 
 ### c)
 
 ```{r}
-
 # the proportion of predictions that are wrong
 wells |>
-  summarise(proportion_wrong=mean(pred_wrong))
-
+  summarise(proportion_wrong=mean(pred_wrong_fit1))
 ```
 
 ### d)
 
 ```{r}
-confusion = table(pred1 = wells$pred1, switch = wells$switch)
-print(confusion)
+confusion_fit1 = table(pred1 = wells$pred1, switch = wells$switch)
+print(confusion_fit1)
 ```
 ### e)
 sense and sensibility
 ```{r}
 
-n_true_positives = confusion['1', '1']
-n_true_negatives = confusion['0', '0']
-n_false_positives = confusion['1', '0']
-n_false_negatives = confusion['0', '1']
+n_TP_fit1 = confusion_fit1['1', '1']
+n_TN_fit1 = confusion_fit1['0', '0']
+n_FP_fit1 = confusion_fit1['1', '0']
+n_FN_fit1 = confusion_fit1['0', '1']
 
 # sensitivity = true positives / (true positives + false negatives)
-sensitivity = n_true_positives / (n_true_positives + n_false_negatives)
-print(paste0('sensitivity: ', sensitivity))
+sensitivity_fit1 = n_TP_fit1 / (n_TP_fit1 + n_FN_fit1)
+print(paste0('sensitivity (fit1): ', sensitivity_fit1))
 
 # specificity = true negatives / (true negatives + false positives)
-specificity <- n_true_negatives / (n_true_negatives + n_false_positives)
-print(paste0('specificity: ', specificity))
-
+specificity_fit1 = n_TN_fit1 / (n_TN_fit1 + n_FP_fit1)
+print(paste0('specificity (fit1): ', specificity_fit1))
 ```
 
 ### f)
+The null model:
 
 ```{r}
 # null error rate from guessing the most common one
@@ -622,7 +665,7 @@ The regression model and the null prediction have about the same accuracy. The m
 
 fit2 = glm(switch ~ larsenic, data=wells, family='binomial')
 fit3 = glm(switch ~ zeduc, data=wells, family='binomial')
-fit4 = glm(switch ~ dist100 +larsenic +zeduc, data=wells, family='binomial')
+fit4 = glm(switch ~ dist100 + larsenic + zeduc, data=wells, family='binomial')
 
 stargazer(fit1, fit2, fit3, fit4,
           type='text', 
@@ -668,4 +711,96 @@ summary(fit3)
 
 Increase in a year of education level of the head of the household increases log odds of changing the well that you use. If they have more education, they are more likely to learn about the dangers of arsenic contamination to health and get their families to change to a safe well. This is significant at the 0.1% level.
 
+### c)
+
+```{r}
+# my function that basically does everything
+logit_effects_fit4_dist = logit_effects(fit4, 'dist100')
+logit_effects_fit4_arse = logit_effects(fit4, 'larsenic')
+logit_effects_fit4_educ = logit_effects(fit4, 'zeduc')
+```
+
+Marginal effect of average household
+```{r}
+print(paste0('marginal effect at average (dist100): ', 
+             logit_effects_fit4_dist$marginal_effect_average))
+print(paste0('marginal effect at average (larsenic): ', 
+             logit_effects_fit4_arse$marginal_effect_average))
+print(paste0('marginal effect at average (zeduc): ', 
+             logit_effects_fit4_educ$marginal_effect_average))
+```
+
+A 100-metre increase in distance from a safe well is associated with a 32.4 percentage point decrease in the average household's probability of switching wells. A 1-unit increase in level of arsenic is associated with a 29.4 percentage point increase in the average household's probability of switching wells. A 1-unit increase in years of education of the head of the household is associated with a 5.7 percentage point increase in the average household's probability of switching wells.
+
+Divide-by-4
+```{r}
+print(paste0('divide-by-four rule (dist100): ', 
+             logit_effects_fit4_dist$divide_by_4))
+print(paste0('divide-by-four rule (larsenic): ', 
+             logit_effects_fit4_arse$divide_by_4))
+print(paste0('divide-by-four rule (zeduc): ', 
+             logit_effects_fit4_educ$divide_by_4))
+```
+
+At the average household, marginal effects are pretty close to the maximum partial effect but slightly lower.
+
+## 6.
+
+Get the predictions again
+```{r}
+wells = wells |>
+  # probabilities 
+  # it's the same one for all three of them since it comes from the same fit
+  mutate(p4 = logit_effects_fit4_dist$predicted_probabilities) |>
+  # make the prediction based on the probabilities
+  mutate(pred4 = ifelse(p4 > 0.5, 1, 0)) |>
+  # check where the prediction is wrong
+  mutate(pred_wrong_fit4 = ifelse(pred4 != switch, 1, 0))
+```
+
+Accuracy:
+```{r}
+# the proportion of predictions that are wrong
+wells |>
+  summarise(proportion_wrong=mean(pred_wrong_fit4))
+```
+
+The confusion matrix:
+```{r}
+confusion_fit4 = table(pred4 = wells$pred4, switch = wells$switch)
+print(confusion_fit4)
+```
+
+Calculating sensitivity and specificity:
+```{r}
+
+n_TP_fit4 = confusion_fit4['1', '1']
+n_TN_fit4 = confusion_fit4['0', '0']
+n_FP_fit4 = confusion_fit4['1', '0']
+n_FN_fit4 = confusion_fit4['0', '1']
+
+# sensitivity = true positives / (true positives + false negatives)
+sensitivity_fit4 = n_TP_fit4 / (n_TP_fit4 + n_FN_fit4)
+print(paste0('sensitivity (fit4): ', sensitivity_fit4))
+
+# specificity = true negatives / (true negatives + false positives)
+specificity_fit4 = n_TN_fit4 / (n_TN_fit4 + n_FP_fit4)
+print(paste0('specificity (fit4): ', specificity_fit4))
+```
+
+Recall the null model:
+```{r}
+print(paste0('null error rate: ', null_error))
+```
+
+Recall fit1:
+```{r}
+print(paste0('sensitivity (fit1): ', sensitivity_fit1))
+print(paste0('specificity (fit1): ', specificity_fit1))
+```
+
+This model does better on just accuracy than the null model and fit1. It has a higher sensitivity and a lower specificity than fit1, so it's relatively better at predicting a switcher (compared to fit1). 
+
 # NSW
+
+
