@@ -1,5 +1,7 @@
 ---
 title: "Core ERM Problem Set 2"
+author: '1088708'
+date: "`r Sys.Date()`"
 format: html
 editor: visual
 ---
@@ -9,15 +11,16 @@ library(scales)
 library(tidyverse)
 library(purrr)
 library(EnvStats)
-library(broom)
 library(GGally)
 library(stargazer)
 library(haven)
+library(modelsummary)
+library(broom)
 
 # import data
 football = read_csv('https://ditraglia.com/data/fair_football.csv')
 wells = read_csv('https://ditraglia.com/data/wells.csv')
-experimental = read_dta('https://users.nber.org/~rdehejia/data/nsw.dta')
+nsw_dw = read_dta('https://users.nber.org/~rdehejia/data/nsw_dw.dta')
 controls = read_dta('https://users.nber.org/~rdehejia/data/cps_controls.dta')
 
 # set seed
@@ -37,30 +40,38 @@ get_MSE = function(regression_output) {
   return(mean(residuals(regression_output)^2))
 }
 
+
 # wells partial effects and stuff
 logit_effects = function(fit, predictor) {
   # grab the data that's still stored in fit
   data = model.frame(fit)
   
   # find the characteristics of the average person in the data
-  mean_data = as.data.frame(lapply(data, function(x) mean(x, na.rm = TRUE)))
+  mean_data = as.data.frame(lapply(data, function(x) mean(x, na.rm=TRUE)))
   
   # predicted probability of switch at the mean
-  fakeperson = predict(fit, newdata=mean_data)[[1]]
-  p_avg = dlogis(fakeperson)
+  p_avg = predict.glm(fit, newdata=mean_data, type='response')[[1]]
+  
+  # density for partial effect
+  d_avg = dlogis(predict(fit, newdata=mean_data)[[1]])
   
   # estimated logit coefficient of the predictor
   bhat = coef(fit)[[predictor]]
   
   # marginal effect at the average
-  MEA = bhat * p_avg
+  MEA = bhat * d_avg
   
   # divide-by-4 rule thing
   div4 = bhat / 4
   
-  # average partial effect
-  p_all = predict(fit, type='response')
-  APE = mean(bhat * p_all, na.rm=TRUE)
+  # predicted probability of switch for all observations
+  p_all = predict.glm(fit, type='response')
+  
+  # density for partial effect
+  d_all = dlogis(predict(fit))
+  
+  # average marginal effect
+  APE = mean(bhat * d_all, na.rm=TRUE)
   
   # return everything
   return(list(
@@ -69,12 +80,46 @@ logit_effects = function(fit, predictor) {
     coefficient=bhat,
     marginal_effect_average=MEA,
     divide_by_4=div4,
-    predicted_probabilities = p_all,
+    predicted_probabilities=p_all,
     average_partial_effect=APE
   ))
 }
 
-# data cleaning
+
+# data cleaning for part 1 of NSW
+cleanup = function(data) {
+  data = data |>
+    # b) rename earnings variables
+    rename(earnings74 = re74) |>
+    rename(earnings75 = re75) |>
+    rename(earnings78 = re78) |> 
+    
+    # c) create string race variable
+    mutate(race = case_when(
+      black == 1 ~ 'black',
+      hispanic == 1 ~ 'hispanic',
+      TRUE ~ 'white')) |>
+    
+    # d) create string treat, nodegree, and marriage
+    mutate(str_treat = ifelse(treat == 1, 'treated', 'untreated')) |>
+    mutate(str_nodegree = ifelse(nodegree == 1, 'no degree', 'degree')) |>
+    mutate(str_married = ifelse(married == 1, 'married', 'unmarried')) |>
+    
+    # e) create employment variables
+    mutate(employment74 = ifelse(earnings74 != 0, 1, 0)) |>
+    mutate(employment75 = ifelse(earnings75 != 0, 1, 0)) |>
+    # create string employment variables
+    mutate(str_employment74 = ifelse(employment74 == 1, 'employed', 
+                                     'unemployed')) |>
+    mutate(str_employment75 = ifelse(employment75 == 1, 'employed', 
+                                     'unemployed'))
+  
+  # f) why would you drop variables you're going to use later
+  # drop data_id
+  data = data[, !(names(data) == 'data_id')]
+  
+  return(data)
+}
 
 ```
 
@@ -359,6 +404,8 @@ cor(football[, c(computer_rankings, 'REC')])
 
 Test the null hypothesis that the coefficient on MAT, SAG, BIL, COL, MAS, or DUN is zero at the 5% level. In the model with everything, we can see that the coefficients of MAT, COL, and MAS are not significant. I feel like to properly do this question there are way too many possible orderings to remove the predictors in. If you remove them one by one, different predictors may become non-significant in those regressions. I'm just removing them in order of largest P-value. I'm eventually going with the model that uses H, REC, SAG, BIL, COL and DUN.
 
+Now that I'm handing it in soon it would've been so much easier to do an F test but I did not!!
+
 ```{r}
 # use H, REC, and all computer predictors to predict SPREAD with no intercept
 m5 = lm(SPREAD ~ 0 + H + REC + MAT + SAG + BIL + COL + MAS + DUN, 
@@ -392,9 +439,9 @@ tidy(m5rMASMAT)
 
 ```
 
-Finding the best individual predictor: want the best (lowest) MSE predictor like when training a regression model in machine learning
+Finding the best individual predictor: want the best (lowest) MSE predictor
 
-I'm at the drop in session right now and no one else did it like this but this is just how I thought of it since we're looking at prediction quality
+I'm about to submit this and I actually have no idea why I went with MSE, I think R-squared would have been fine
 
 ```{r}
 # save MSEs
@@ -465,8 +512,6 @@ We fail to reject the null hypothesis and conclude that the true coefficient on 
 
 ## 8.
 
-wtf are these warnings
-
 ```{r warning=FALSE}
 
 stargazer(m3, m5, m5rMAS, m5rMASMAT, m6, m7,
@@ -498,6 +543,7 @@ wells = wells |>
 ### c)
 
 Histogram of arsenic levels
+
 ```{r}
 # not log
 ggplot(wells, aes(x=arsenic)) +
@@ -508,7 +554,9 @@ ggplot(wells, aes(x=arsenic)) +
     y='Number of observations'
 )
 ```
+
 Histogram of log arsenic levels
+
 ```{r}
 # log
 ggplot(wells, aes(x=larsenic)) +
@@ -519,6 +567,7 @@ ggplot(wells, aes(x=larsenic)) +
     y='Number of observations'
 )
 ```
+
 The distribution is very right-skewed (although this doesn't show as much on the log scale since the log values are closer together). Most wells in the data are close to the safe/unsafe threshold.
 
 ## 2.
@@ -531,7 +580,9 @@ fit1 = glm(switch ~ dist100, data=wells, family='binomial')
 ```
 
 ### b)
+
 Logistic regression function for fit1
+
 ```{r}
 ggplot(wells, aes(x=dist100, y=switch)) +
   # regression line
@@ -553,10 +604,10 @@ Increase in distance from the nearest safe well decreases log odds of changing t
 ```{r}
 # my function that basically does everything lol
 logit_effects_fit1 = logit_effects(fit1, 'dist100')
-
 ```
 
 Predicted probability of the average
+
 ```{r}
 # find the average distance from a safe well
 mean_dist100 = logit_effects_fit1$mean_pred
@@ -590,7 +641,6 @@ print(paste0('average partial effect: ', avg_partial_effect_fit1))
 
 ```
 
-
 ## 3.
 
 ### a) and b)
@@ -621,8 +671,11 @@ wells |>
 confusion_fit1 = table(pred1 = wells$pred1, switch = wells$switch)
 print(confusion_fit1)
 ```
+
 ### e)
+
 sense and sensibility
+
 ```{r}
 
 n_TP_fit1 = confusion_fit1['1', '1']
@@ -640,6 +693,7 @@ print(paste0('specificity (fit1): ', specificity_fit1))
 ```
 
 ### f)
+
 The null model:
 
 ```{r}
@@ -657,7 +711,7 @@ print(paste0('null error rate: ', null_error))
 
 ```
 
-The regression model and the null prediction have about the same accuracy. The model has low sensitivity, so it isn't good at predicting when someone does switch wells but is better at predicting when someone does not switch. Since the null model always predicts switch == 1, there are no false negatives or true negatives. Its sensitivity and specificity are one and zero, respectively.
+The regression model has a lower error rate than the null model. The model has high sensitivity, so it's good at predicting when someone does switch wells but has low specificity so is worse at predicting when someone does not switch. Since the null model always predicts switch == 1, there are no false negatives or true negatives. Its sensitivity and specificity are one and zero, respectively.
 
 ## 4.
 
@@ -677,10 +731,12 @@ stargazer(fit1, fit2, fit3, fit4,
 
 ```
 
-## 5. 
+## 5.
 
 ### a)
+
 Logistic regression function for fit2
+
 ```{r}
 ggplot(wells, aes(x=dist100, y=switch)) +
   # regression line
@@ -696,7 +752,9 @@ summary(fit2)
 Increase in log arsenic level above the safe threshold increases log odds of changing the well that you use. This makes sense because higher arsenic levels (and hence higher log arsenic levels since it is an increasing transformation) are and probably are perceived to be more threatening to the well users and they'd be more likely to switch (less likely to stay using the same one). The farther the level of arsenic rises above the safe level, the odds of switching to safe ones increase. This is significant at the 0.1% level.
 
 ### b)
+
 Logistic regression function for fit3
+
 ```{r}
 ggplot(wells, aes(x=zeduc, y=switch)) +
   # regression line
@@ -721,6 +779,7 @@ logit_effects_fit4_educ = logit_effects(fit4, 'zeduc')
 ```
 
 Marginal effect of average household
+
 ```{r}
 print(paste0('marginal effect at average (dist100): ', 
              logit_effects_fit4_dist$marginal_effect_average))
@@ -730,9 +789,10 @@ print(paste0('marginal effect at average (zeduc): ',
              logit_effects_fit4_educ$marginal_effect_average))
 ```
 
-A 100-metre increase in distance from a safe well is associated with a 32.4 percentage point decrease in the average household's probability of switching wells. A 1-unit increase in level of arsenic is associated with a 29.4 percentage point increase in the average household's probability of switching wells. A 1-unit increase in years of education of the head of the household is associated with a 5.7 percentage point increase in the average household's probability of switching wells.
+A 100-metre increase in distance from a safe well is associated with a 23.9 percentage point decrease in the average household's probability of switching wells. A 1-unit increase in level of arsenic is associated with a 21.7 percentage point increase in the average household's probability of switching wells. A 1-unit increase in years of education of the head of the household is associated with a 4.2 percentage point increase in the average household's probability of switching wells.
 
 Divide-by-4
+
 ```{r}
 print(paste0('divide-by-four rule (dist100): ', 
              logit_effects_fit4_dist$divide_by_4))
@@ -747,6 +807,7 @@ At the average household, marginal effects are pretty close to the maximum parti
 ## 6.
 
 Get the predictions again
+
 ```{r}
 wells = wells |>
   # probabilities 
@@ -759,6 +820,7 @@ wells = wells |>
 ```
 
 Accuracy:
+
 ```{r}
 # the proportion of predictions that are wrong
 wells |>
@@ -766,12 +828,14 @@ wells |>
 ```
 
 The confusion matrix:
+
 ```{r}
 confusion_fit4 = table(pred4 = wells$pred4, switch = wells$switch)
 print(confusion_fit4)
 ```
 
 Calculating sensitivity and specificity:
+
 ```{r}
 
 n_TP_fit4 = confusion_fit4['1', '1']
@@ -789,18 +853,207 @@ print(paste0('specificity (fit4): ', specificity_fit4))
 ```
 
 Recall the null model:
+
 ```{r}
 print(paste0('null error rate: ', null_error))
 ```
 
 Recall fit1:
+
 ```{r}
 print(paste0('sensitivity (fit1): ', sensitivity_fit1))
 print(paste0('specificity (fit1): ', specificity_fit1))
 ```
 
-This model does better on just accuracy than the null model and fit1. It has a higher sensitivity and a lower specificity than fit1, so it's relatively better at predicting a switcher (compared to fit1). 
+This model has a better error rate than the null model and fit1. It has a lower sensitivity and a higher specificity than fit1, so it's relatively better at predicting a switcher (compared to fit1).
 
 # NSW
 
+Load the data
 
+```{r}
+experimental = cleanup(nsw_dw)
+cps_controls = cleanup(controls)
+```
+
+Some lists of variables
+
+```{r}
+# the character ones i just created
+string_variables = c('race', 'str_treat', 'str_nodegree', 'str_married', 
+                     'str_employment74', 'str_employment75')
+# numerical variables (including dummies)
+numerical_variables = c('age', 'education', 'black', 'hispanic', 'treat', 
+                        'nodegree', 'married', 'employment74', 'employment75',
+                        'earnings74', 'earnings75', 'earnings78')
+
+```
+
+## 2.
+
+### a)
+
+String variables:
+
+```{r}
+datasummary_skim(experimental[string_variables])
+```
+
+Numerical variables:
+
+```{r}
+datasummary_skim(experimental[numerical_variables])
+```
+
+### b)
+
+```{r}
+datasummary_balance(~ treat, data=experimental[numerical_variables])
+```
+
+### c)
+
+```{r}
+# earnings in each group
+earnings78_0 = experimental$earnings78[experimental$treat == 0]
+earnings78_1 = experimental$earnings78[experimental$treat == 1]
+
+# standard error of difference in means
+test_of_means = t.test(earnings78_1, earnings78_0, 
+                       alternative='two.sided', var.equal=FALSE)
+print(test_of_means$conf.int)
+```
+
+## 3.
+
+```{r}
+# concat
+composite = bind_rows(cps_controls, experimental[experimental$treat == 1, ])
+
+datasummary_balance(~ treat, data=composite[numerical_variables])
+```
+
+The control group in the CPS data has higher mean earnings78 than the control group in the experimental data. When comparing the treatment group to the CPS controls, the difference in mean earnings78 is not significant at the 5% level.
+
+```{r}
+# earnings in each group
+earnings78_cps = composite$earnings78[composite$treat == 0]
+earnings78_exp = composite$earnings78[composite$treat == 1]
+
+# standard error of difference in means
+test_of_means_composite = t.test(earnings78_exp, earnings78_cps, 
+                                 alternative='two.sided', var.equal=FALSE)
+print(test_of_means_composite$conf.int)
+```
+
+## 4.
+
+### a)
+
+```{r}
+# regression on all variables
+regression = lm(earnings78 ~ treat + age + education + black + hispanic + 
+                  married + nodegree + earnings74 + earnings75, data=composite)
+
+tidy(regression)
+```
+
+Receiving the treatment increases earnings
+
+### b)
+
+The treatment must be as-good-as randomly assigned after adjusting for covariates. This is the part that allows us to isolate the impact of the treatment itself outside of what other factors might impact outcomes. For any values of the covariates, the treated and untreated groups must have some overlap at those values. This is the part that allows us to actually estimate the CATE for all observations.
+
+### c)
+
+So to actually do it you need to interact the variable treat with all the other covariates or subtract the mean from all the covariates, running the same regression but with the re-parameterised model. In this regression, the estimated coefficient on treat will be the estimated ATE, which in general is not equal to the estimated coefficient on treat in the regression from part (a).
+
+## 5.
+
+### a)
+
+Don't include earnings78 since that's the outcome variable
+
+```{r}
+# estimate logit regression of treat
+estimate_propensities = glm(treat ~  age + I(age^2) + I(age^3) + education + 
+                              I(education^2) + married + nodegree + black + 
+                              hispanic + earnings74 + earnings75 + 
+                              employment74 + employment75, 
+                            data=composite, 
+                            family='binomial')
+```
+
+### b)
+```{r}
+# predicted probabilities
+composite$propensity = augment(estimate_propensities, 
+                               type.predict='response')$.fitted
+```
+
+Propensity scores for untreated
+```{r}
+propensities_0 = composite$propensity[composite$treat == 0]
+
+hist(propensities_0, breaks=100)
+```
+
+Propensity scores for treated
+```{r}
+propensities_1 = composite$propensity[composite$treat == 1]
+
+hist(propensities_1, breaks=100)
+```
+
+The untreated group tends to have very low propensity scores while the propensity scores of the treated group are a bit more uniform. These two groups must be pretty different in the included characteristics to provide these differences in propensity scores.
+
+The untreated propensities are also much more centered around the mean, so they're more similar to each other than the treated group are.
+```{r}
+# 
+print(sd(propensities_1))
+print(sd(propensities_0))
+```
+
+```{r}
+t.test(propensities_1, propensities_0, 
+       alternative='two.sided', var.equal=FALSE)
+```
+
+### c)
+```{r}
+# calculate
+composite = composite |> 
+  # calculate weights
+  mutate(weight1 = treat / propensity, 
+         weight0 = (1 - treat) / (1 - propensity))
+```
+
+Average treatment effect is very large and negative
+```{r}
+composite |>
+  summarize(mean(weight1 * earnings78) - mean(weight0 * earnings78)) |>
+  pull()
+
+```
+### d)
+Removing any observations with a propensity score less than 0.1 or greater than 0.9 before calculating the propensity score weighting estimator
+```{r}
+composite_exclude = composite |>
+  # take out these
+  filter(propensity >= 0.1, propensity <= 0.9) |>
+  # then calculate weights
+  mutate(weight1 = treat / propensity, 
+         weight0 = (1 - treat) / (1 - propensity))
+  
+```
+
+Average treatment effect is now not that large and positive
+```{r}
+composite_exclude |>
+  summarize(mean(weight1 * earnings78) - mean(weight0 * earnings78)) |>
+  pull()
+
+```
+
+### e)
+We removed observations who are very unlikely or very likely to receive treatment based on their observable characteristics. These would have very large weights because the propensity score shows up in the denominator and I guess they had a disproportionate impact on the treatment effect compared to the other observations. 
