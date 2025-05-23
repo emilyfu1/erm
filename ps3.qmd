@@ -1,0 +1,150 @@
+---
+title: "ps3"
+author: "1088708"
+date: "`r Sys.Date()`"
+format: html
+editor: visual
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(stargazer)
+library(broom)
+library(ivreg)
+
+weber = read_csv('https://ditraglia.com/data/weber.csv')
+```
+
+## 1. Weber
+
+### a)
+They try to explain the relative economic prosperity of Protestant regions compared to others, proposing an alternative mechanism for this phenomenon to Weber's protestant work ethic hypothesis. They say that because Martin Luther favoured universal schooling, this educational attainment was then useful for economic activity.
+
+### b)
+Weber wasn't necessarily wrong in an observational way, since BW do observe a significant, positive association between Protestantism and economic prosperity in late-nineteenth-century Prussia. However, instead of saying that Protestant theology causes protestants to work harder, BW argues that they're more successful because they were not Jared (19) and also because Martin Luther produced the first widely used German translation of the Bible instead of wanting it to only be read out in Latin which many people did not understand. Since Protestantism spread around Martin Luther's city of Wittenberg, BW use distance from Wittenberg as an instrument for Protestantism to identify the impact of Protestantism on literacy.
+
+### c)
+Relevance: Tee instrument must be correlated with the explanatory variable. The distance from Wittenburg must be related to literacy,
+
+Exogeneity: The instrument must be uncorrelated with the error term. Distance is a
+
+First, nineteenth-century
+Prussia has the birthplace of the Reformation at its center. Luther
+proclaimed his 95 Theses in Wittenberg, and the Prussian territory conserved Protestantism in its purest form. Second, Prussia
+is Max Weber’s birthplace, and his views were shaped by what he
+observed across Germany. Third, Prussia had rather uniform laws
+and institutional frameworks, with the possible exception of recent annexations (dealt with below). By contrast, cross-country
+comparisons, which constitute the existing literature, are notoriously plagued by the difficulty of netting out the effects of
+other fundamental causes, such as institutions and geography
+
+## 2.
+
+### a)
+
+```{r warning=FALSE}
+# regress f_rw on f_prot 
+ols = lm(f_rw ~ f_prot, data=weber)
+```
+
+### b)
+```{r warning=FALSE}
+# display 
+stargazer(ols,
+          type='text', 
+          dep.var.labels='Literacy rate',
+          no.space=TRUE,
+          digits=3,
+          notes=c('* p<0.05; ** p<0.01; *** p<0.001'),
+          omit.stat=c('f', 'ser'))
+```
+
+### c)
+Choice of education 
+
+When education became more widespread in subsequent
+centuries, these regions could have more easily afforded to educate their children. The fact that “Protestantism” was initially a “protest” movement involving peasant uprisings that reflected
+social discontent is suggestive of such a negative selection bias
+
+
+## 3.
+
+### a)
+
+Yes, kmwittenberg does appear to be a relevant instrument for f_prot
+
+```{r}
+# first-stage regression of f_prot on kmwittenberg
+first_stage = lm(f_prot ~ kmwittenberg, data=weber)
+
+tidy(first_stage)
+```
+
+### b)
+```{r}
+# reduced-form regression of f_rw on kmwittenberg
+reduced_form = lm(f_rw ~ kmwittenberg, data=weber)
+
+tidy(first_stage)
+```
+
+### c) and d)
+```{r}
+# IV regression of f_rw on f_prot using kmwittenberg as an instrument for f_prot
+iv = ivreg(f_rw ~ f_prot | kmwittenberg, data = weber)
+
+tidy(iv)
+```
+
+### e)
+```{r}
+# the just-identified case: indirect least squares
+bhat_iv = coef(reduced_form)['kmwittenberg'] / coef(first_stage)['kmwittenberg']
+
+# check if coefficients are equal
+
+# what the heck
+print(bhat_iv[['kmwittenberg']]  == coef(iv)[['f_prot']])
+```
+
+## 4.
+
+### a)
+```{r}
+ols_full = lm(f_rw ~ f_prot + f_young + f_jew + f_fem + 
+                f_ortsgeb + f_pruss + hhsize + lnpop + 
+                gpop + f_miss + f_blind + f_deaf + f_dumb, data=weber)
+
+tidy(ols_full)
+```
+
+### b)
+```{r}
+# first-stage regression of f_prot on kmwittenberg and demographic controls
+first_stage_full = lm(f_prot ~ kmwittenberg + f_jew + f_fem + 
+                        f_ortsgeb + f_pruss + hhsize + lnpop + 
+                        gpop + f_miss + f_blind + f_deaf + f_dumb, data=weber)
+
+# IV regression of f_rw on f_prot using kmwittenberg as an instrument for f_prot
+# and demographic controls
+iv_full = ivreg(f_rw ~ f_jew + f_fem + f_ortsgeb + f_pruss + 
+                   hhsize + lnpop + gpop + f_miss + f_blind + 
+                   f_deaf + f_dumb + f_prot |
+                   f_jew + f_fem + f_ortsgeb + f_pruss + 
+                   hhsize + lnpop + gpop + f_miss + f_blind + 
+                   f_deaf + f_dumb + kmwittenberg, data = weber)
+
+tidy(first_stage_full)
+```
+
+### c)
+```{r, warning=FALSE}
+stargazer(ols_full, first_stage_full, iv_full,
+          type='text', 
+          no.space=TRUE,
+          digits=3,
+          notes=c('* p<0.05; ** p<0.01; *** p<0.001'),
+          omit.stat=c('f', 'ser'))
+```
+
+### d)
+Ihe IV estimated coefficient is higher on f_prot than the OLS coefficient, which suggests the "negative selection bias" of the OLS results. A one percentage point increase in the percentage of Protestants is estimated to increase the literacy rate by 0.190 percentage points, which is higher than the OLS estimate.
