@@ -11,8 +11,14 @@ library(tidyverse)
 library(stargazer)
 library(broom)
 library(ivreg)
+library(MASS)
 
+# import data
 weber = read_csv('https://ditraglia.com/data/weber.csv')
+
+# set parameters
+n = 100
+
 ```
 
 ## 1. Weber
@@ -98,12 +104,14 @@ tidy(iv)
 ### e)
 ```{r}
 # the just-identified case: indirect least squares
-bhat_iv = coef(reduced_form)['kmwittenberg'] / coef(first_stage)['kmwittenberg']
+bhat_2sls = coef(reduced_form)['kmwittenberg'] / coef(first_stage)['kmwittenberg']
 
 # check if coefficients are equal
 
 # what the heck
-print(bhat_iv[['kmwittenberg']]  == coef(iv)[['f_prot']])
+print(bhat_2sls[['kmwittenberg']])
+print(coef(iv)[['f_prot']])
+print(bhat_2sls[['kmwittenberg']]  == coef(iv)[['f_prot']])
 ```
 
 ## 4.
@@ -148,3 +156,76 @@ stargazer(ols_full, first_stage_full, iv_full,
 
 ### d)
 Ihe IV estimated coefficient is higher on f_prot than the OLS coefficient, which suggests the "negative selection bias" of the OLS results. A one percentage point increase in the percentage of Protestants is estimated to increase the literacy rate by 0.190 percentage points, which is higher than the OLS estimate.
+
+# Weak IV
+
+## 1. 
+```{r}
+z_fixed = rnorm(n)
+
+# scale to sample mean
+z_fixed = z_fixed - mean(z_fixed)
+
+# scale to sum of squares
+z_fixed = z_fixed * sqrt(n / sum(z_fixed^2))
+```
+
+## 2. 
+```{r}
+draw_sim_data = function(pi, rho, z, n=100, beta=0) {
+  
+  # joint distribution of u and v
+  sigma = matrix(c(1, rho, rho, 1), nrow=2)
+  
+  # jointly generate u and v
+  u_v = mvrnorm(n=n, mu=c(0, 0), Sigma=sigma)
+  u = u_v[, 1]
+  v = u_v[, 2]
+  
+  # get x and y
+  x = pi * z + v
+  y = beta * x + u
+  
+  # form dataframe
+  data = tibble(x=x, y=y, z=z)
+  
+  return(data)
+}
+```
+
+## 3.
+```{r}
+get_iv_stats = function(dat) {
+  
+  # get first stage and reduced form
+  first_stage = lm(x ~ z, data=dat)
+  reduced_form = lm(y ~ z, data=dat)
+  
+  # calculate the estimated coefficient
+  bhat_2sls = coef(reduced_form)['z'] / coef(first_stage)['z']
+
+  # the estimated residuals
+  uhat = y - bhat_2sls * x
+
+  # estimated residual variance
+  sigma2_uhat = sum(uhat^2) / (n - 2)
+
+  # estimated standard error of bhat 
+  # pls blame steve bond if this is wrong
+  se_bhat = sqrt(sigma2_uhat * sum(z^2) / (sum(z * x)^2))
+
+  return(c(est = bhat_2sls, se = se_bhat))
+}
+```
+
+## 4.
+
+## 5. 
+
+## 6.
+
+## 7.
+
+# MLDA
+
+# my mini project
