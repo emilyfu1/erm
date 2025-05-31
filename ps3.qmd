@@ -12,12 +12,15 @@ library(stargazer)
 library(broom)
 library(ivreg)
 library(MASS)
+library(purrr)
 
 # import data
 weber = read_csv('https://ditraglia.com/data/weber.csv')
 
 # set parameters
 n = 100
+sims_combinations = expand_grid(rho = c(0.5, 0.9, 0.99), 
+                                conc = c(0, 0.25, 10, 100))
 
 ```
 
@@ -198,8 +201,13 @@ draw_sim_data = function(pi, rho, z, n=100, beta=0) {
 get_iv_stats = function(dat) {
   
   # get first stage and reduced form
-  first_stage = lm(x ~ z, data=dat)
-  reduced_form = lm(y ~ z, data=dat)
+  first_stage = lm(x ~ 0 + z, data=dat)
+  reduced_form = lm(y ~ 0 + z, data=dat)
+  
+  # the columns
+  y = dat$y
+  x = dat$x
+  z = dat$z
   
   # calculate the estimated coefficient
   bhat_2sls = coef(reduced_form)['z'] / coef(first_stage)['z']
@@ -211,7 +219,6 @@ get_iv_stats = function(dat) {
   sigma2_uhat = sum(uhat^2) / (n - 2)
 
   # estimated standard error of bhat 
-  # pls blame steve bond if this is wrong
   se_bhat = sqrt(sigma2_uhat * sum(z^2) / (sum(z * x)^2))
 
   return(c(est = bhat_2sls, se = se_bhat))
@@ -219,12 +226,99 @@ get_iv_stats = function(dat) {
 ```
 
 ## 4.
+Using the function
+```{r}
+draws = draw_sim_data(pi=1, rho=0.5, z=z_fixed)
+estimates = get_iv_stats(dat=draws)
+print(estimates)
+```
+
+Using ivreg, we get the same estimated coefficient and standard error!
+```{r}
+imrunningoutofwordstocallthesethings = ivreg(y ~ 0 + x | 0 + z, data = draws)
+summary(imrunningoutofwordstocallthesethings)
+```
 
 ## 5. 
+```{r}
+replicate_iv_sim = function(n_reps, conc, rho, z) {
+  
+  # find the first stage from the concentration parameter
+  pi = sqrt(conc / sum(z^2))
+  
+  # store results to a dataframe
+  sims = tibble(est=numeric(), 
+                se=numeric(), 
+                conc=numeric(), 
+                rho=numeric())
+  
+  # repeat draws
+  for (rep in 1:n_reps) {
+    
+    
+    draws = draw_sim_data(pi=pi, rho=rho, z=z)
+    
+    iv_results = get_iv_stats(draws)
+    
+    # append results to a dataframe    
+    new_row = tibble(est=iv_results['est.z'], 
+                     se=iv_results['se'], 
+                     conc=conc, 
+                     rho=rho)
+    sims = bind_rows(sims, new_row)    
+  }
+  
+  # return results
+  return (sims)
+}
+```
 
 ## 6.
+Replications
+```{r}
+simulations = pmap_dfr(.l = list(conc=sims_combinations$conc, 
+                                 rho=sims_combinations$rho), 
+                       .f = function(conc, rho) {replicate_iv_sim(n_reps=10000, 
+                                                                  conc=conc, 
+                                                                  rho=rho, 
+                                                                  z=z_fixed)})
+```
+
+Table of median bias compared to true parameter value
+```{r}
+simulations |>
+  group_by(rho, conc)|>
+  summarise(median_est=median(est), .groups='drop')
+```
+
+I'm noticing that the simulations with higher concentrations (stronger instrumental variables) have median estimates closer to zero. This makes sense since when the instrument is less weak it will be less biased in finite samples and better reflects the true relationship. Simulations with higher covariance between U and V have median estimates that are further from zero (in magnitude). If there is correlation with U and V, then X is correlated with U due to the DGP for X.
 
 ## 7.
+First remove extreme values:
+```{r}
+filter_simulations = simulations |>
+  filter(est >= -3, est <= 3)
+```
+
+Kernel density plots:
+```{r}
+ggplot(filter_simulations, aes(x=est, colour=factor(conc))) +
+  geom_density() + 
+  facet_wrap(~ rho) + # different values of rho
+  labs(title = 'densities of the 2SLS estimator by concentration', 
+       x = 'estimated coefficient', 
+       color='concentration') +
+  theme_minimal()
+
+ggplot(filter_simulations, aes(x=est/se, colour=factor(conc))) +
+  geom_density() + 
+  facet_wrap(~ rho) + # different values of rho
+  labs(title = 'densities of the 2SLS estimator t statistic by concentration', 
+       x = 't statistic', 
+       color='concentration') +
+  theme_minimal()
+```
+In the plots, I see that the simulations with stronger instruments are centered around the true value of beta based on the DGP, while the simulations with weaker instruments are further away from the true value (but are closer to zero as concentration increases), which is what we can also see from the table. In the plot of the test statistics, I'm noticing that the plot for the regressions with the highest covariance between U and V is more spread out around zero, but this is more noticeable for lower concentrations.
 
 # MLDA
 
