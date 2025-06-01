@@ -13,9 +13,11 @@ library(broom)
 library(ivreg)
 library(MASS)
 library(purrr)
+library(haven)
 
 # import data
 weber = read_csv('https://ditraglia.com/data/weber.csv')
+mlda = read_dta('https://ditraglia.com/data/mlda.dta')
 
 # set parameters
 n = 100
@@ -27,29 +29,22 @@ sims_combinations = expand_grid(rho = c(0.5, 0.9, 0.99),
 ## 1. Weber
 
 ### a)
+
 They try to explain the relative economic prosperity of Protestant regions compared to others, proposing an alternative mechanism for this phenomenon to Weber's protestant work ethic hypothesis. They say that because Martin Luther favoured universal schooling, this educational attainment was then useful for economic activity.
 
 ### b)
+
 Weber wasn't necessarily wrong in an observational way, since BW do observe a significant, positive association between Protestantism and economic prosperity in late-nineteenth-century Prussia. However, instead of saying that Protestant theology causes protestants to work harder, BW argues that they're more successful because they were not Jared (19) and also because Martin Luther produced the first widely used German translation of the Bible instead of wanting it to only be read out in Latin which many people did not understand. Since Protestantism spread around Martin Luther's city of Wittenberg, BW use distance from Wittenberg as an instrument for Protestantism to identify the impact of Protestantism on literacy.
 
 ### c)
-Relevance: Tee instrument must be correlated with the explanatory variable. The distance from Wittenburg must be related to literacy,
 
-Exogeneity: The instrument must be uncorrelated with the error term. Distance is a
+Relevance: The instrument must be correlated with the explanatory variable. The distance from Wittenburg must be correlated with literacy, which we can see from the first-stage regression.
 
-First, nineteenth-century
-Prussia has the birthplace of the Reformation at its center. Luther
-proclaimed his 95 Theses in Wittenberg, and the Prussian territory conserved Protestantism in its purest form. Second, Prussia
-is Max Weber’s birthplace, and his views were shaped by what he
-observed across Germany. Third, Prussia had rather uniform laws
-and institutional frameworks, with the possible exception of recent annexations (dealt with below). By contrast, cross-country
-comparisons, which constitute the existing literature, are notoriously plagued by the difficulty of netting out the effects of
-other fundamental causes, such as institutions and geography
+Exogeneity: The instrument must be uncorrelated with the error term in the structural equation for the literacy rate, so distance from Wittenberg must only impact literacy rate through the spread of Protestantism and not through other factors like differences in politics/geography/development. I don't really think this is perfectly testable using the data. what BW say is that the setting of 19th century Prussia is appropriate for this since it had uniform laws and institutional settings. 
 
 ## 2.
 
 ### a)
-
 ```{r warning=FALSE}
 # regress f_rw on f_prot 
 ols = lm(f_rw ~ f_prot, data=weber)
@@ -68,19 +63,12 @@ stargazer(ols,
 ```
 
 ### c)
-Choice of education 
 
-When education became more widespread in subsequent
-centuries, these regions could have more easily afforded to educate their children. The fact that “Protestantism” was initially a “protest” movement involving peasant uprisings that reflected
-social discontent is suggestive of such a negative selection bias
-
+These results cannot be interpreted causally. BW mention a source of negative selection: initially-disadvantaged regions may have been the first ones to adopt Protestantism because the movement was seen as a protest against economic/social inequality. Then, comparing Protestant and Catholic regions without accounting for the initial differences in prosperity biases the OLS estimate downward. It could also be possible that more progressive areas or areas that already had certain cultural proclivities to Protestant values would be likely early adopters.
 
 ## 3.
 
 ### a)
-
-Yes, kmwittenberg does appear to be a relevant instrument for f_prot
-
 ```{r}
 # first-stage regression of f_prot on kmwittenberg
 first_stage = lm(f_prot ~ kmwittenberg, data=weber)
@@ -88,15 +76,20 @@ first_stage = lm(f_prot ~ kmwittenberg, data=weber)
 tidy(first_stage)
 ```
 
+Yes, kmwittenberg does appear to be a relevant instrument for f_prot. The first stage shows that a one-kilometre increase in distance from Wittenberg is associated with approximately a 0.094-point decrease in the percentage of of Protestants in a county, which is significantly different from zero at the 1% level. This makes sense since BW mention that Protestantism spread geographically from Wittenberg so farther areas were less exposed.
+
 ### b)
 ```{r}
 # reduced-form regression of f_rw on kmwittenberg
 reduced_form = lm(f_rw ~ kmwittenberg, data=weber)
 
-tidy(first_stage)
+tidy(reduced_form)
 ```
 
+The reduced form shows that a one-kilometre increase in distance from Wittenberg is associated with approximately a 0.039-point decrease in the literacy rate of a county, which is also significantly different from zero at the 1% level.
+
 ### c) and d)
+
 ```{r}
 # IV regression of f_rw on f_prot using kmwittenberg as an instrument for f_prot
 iv = ivreg(f_rw ~ f_prot | kmwittenberg, data = weber)
@@ -104,22 +97,27 @@ iv = ivreg(f_rw ~ f_prot | kmwittenberg, data = weber)
 tidy(iv)
 ```
 
+An all-Catholic county would have f_prot = 0, so the intercept would represent that literacy rate (~60.451%). An all-protestant county would have f_prot = 1, which predicts a literacy rate of above 100%, which doesn't really make sense, but there probably isn't a 100% Protestant county anywhere in the data anyways and the linear model doesn't know that we are dealing with percentages. The coefficient itself says that a one-unit increase (so 100 percentage points) in Protestants increases the literacy rate by 42.2 percentage points. This is much higher than the OLS estimated coeffient from before.
+
 ### e)
+
 ```{r}
 # the just-identified case: indirect least squares
 bhat_2sls = coef(reduced_form)['kmwittenberg'] / coef(first_stage)['kmwittenberg']
 
 # check if coefficients are equal
 
-# what the heck
+# print out coefficients
 print(bhat_2sls[['kmwittenberg']])
 print(coef(iv)[['f_prot']])
+# what the heck
 print(bhat_2sls[['kmwittenberg']]  == coef(iv)[['f_prot']])
 ```
 
 ## 4.
 
 ### a)
+
 ```{r}
 ols_full = lm(f_rw ~ f_prot + f_young + f_jew + f_fem + 
                 f_ortsgeb + f_pruss + hhsize + lnpop + 
@@ -129,25 +127,26 @@ tidy(ols_full)
 ```
 
 ### b)
+
 ```{r}
 # first-stage regression of f_prot on kmwittenberg and demographic controls
-first_stage_full = lm(f_prot ~ kmwittenberg + f_jew + f_fem + 
-                        f_ortsgeb + f_pruss + hhsize + lnpop + 
-                        gpop + f_miss + f_blind + f_deaf + f_dumb, data=weber)
+first_stage_full = lm(f_prot ~ kmwittenberg + f_young + f_jew + f_fem + 
+                        f_ortsgeb + f_pruss + hhsize + lnpop + gpop + 
+                        f_miss + f_blind + f_deaf + f_dumb, data=weber)
 
 # IV regression of f_rw on f_prot using kmwittenberg as an instrument for f_prot
 # and demographic controls
-iv_full = ivreg(f_rw ~ f_jew + f_fem + f_ortsgeb + f_pruss + 
-                   hhsize + lnpop + gpop + f_miss + f_blind + 
-                   f_deaf + f_dumb + f_prot |
-                   f_jew + f_fem + f_ortsgeb + f_pruss + 
-                   hhsize + lnpop + gpop + f_miss + f_blind + 
-                   f_deaf + f_dumb + kmwittenberg, data = weber)
+iv_full = ivreg(f_rw ~ f_young + f_jew + f_fem + f_ortsgeb + f_pruss + hhsize + 
+                  lnpop + gpop + f_miss + f_blind + f_deaf + f_dumb + f_prot | 
+                  f_young + f_jew + f_fem + f_ortsgeb + f_pruss + hhsize + 
+                  lnpop + gpop + f_miss + f_blind + f_deaf + f_dumb + 
+                  kmwittenberg, data = weber)
 
 tidy(first_stage_full)
 ```
 
 ### c)
+
 ```{r, warning=FALSE}
 stargazer(ols_full, first_stage_full, iv_full,
           type='text', 
@@ -157,12 +156,16 @@ stargazer(ols_full, first_stage_full, iv_full,
           omit.stat=c('f', 'ser'))
 ```
 
+The coefficient on f_prot is lower after adding all these controls for the OLS and IV compared to their counterparts, but the IV estimated coefficient is still higher than the OLS estimated coefficient and both are still significant.
+
 ### d)
+
 Ihe IV estimated coefficient is higher on f_prot than the OLS coefficient, which suggests the "negative selection bias" of the OLS results. A one percentage point increase in the percentage of Protestants is estimated to increase the literacy rate by 0.190 percentage points, which is higher than the OLS estimate.
 
 # Weak IV
 
-## 1. 
+## 1.
+
 ```{r}
 z_fixed = rnorm(n)
 
@@ -173,7 +176,8 @@ z_fixed = z_fixed - mean(z_fixed)
 z_fixed = z_fixed * sqrt(n / sum(z_fixed^2))
 ```
 
-## 2. 
+## 2.
+
 ```{r}
 draw_sim_data = function(pi, rho, z, n=100, beta=0) {
   
@@ -197,6 +201,7 @@ draw_sim_data = function(pi, rho, z, n=100, beta=0) {
 ```
 
 ## 3.
+
 ```{r}
 get_iv_stats = function(dat) {
   
@@ -226,7 +231,9 @@ get_iv_stats = function(dat) {
 ```
 
 ## 4.
+
 Using the function
+
 ```{r}
 draws = draw_sim_data(pi=1, rho=0.5, z=z_fixed)
 estimates = get_iv_stats(dat=draws)
@@ -234,12 +241,14 @@ print(estimates)
 ```
 
 Using ivreg, we get the same estimated coefficient and standard error!
+
 ```{r}
 imrunningoutofwordstocallthesethings = ivreg(y ~ 0 + x | 0 + z, data = draws)
 summary(imrunningoutofwordstocallthesethings)
 ```
 
-## 5. 
+## 5.
+
 ```{r}
 replicate_iv_sim = function(n_reps, conc, rho, z) {
   
@@ -254,7 +263,6 @@ replicate_iv_sim = function(n_reps, conc, rho, z) {
   
   # repeat draws
   for (rep in 1:n_reps) {
-    
     
     draws = draw_sim_data(pi=pi, rho=rho, z=z)
     
@@ -274,7 +282,9 @@ replicate_iv_sim = function(n_reps, conc, rho, z) {
 ```
 
 ## 6.
+
 Replications
+
 ```{r}
 simulations = pmap_dfr(.l = list(conc=sims_combinations$conc, 
                                  rho=sims_combinations$rho), 
@@ -285,6 +295,7 @@ simulations = pmap_dfr(.l = list(conc=sims_combinations$conc,
 ```
 
 Table of median bias compared to true parameter value
+
 ```{r}
 simulations |>
   group_by(rho, conc)|>
@@ -294,6 +305,7 @@ simulations |>
 I'm noticing that the simulations with higher concentrations (stronger instrumental variables) have median estimates closer to zero. This makes sense since when the instrument is less weak it will be less biased in finite samples and better reflects the true relationship. Simulations with higher covariance between U and V have median estimates that are further from zero (in magnitude). If there is correlation with U and V, then X is correlated with U due to the DGP for X.
 
 ## 7.
+
 First remove extreme values:
 ```{r}
 filter_simulations = simulations |>
@@ -318,8 +330,100 @@ ggplot(filter_simulations, aes(x=est/se, colour=factor(conc))) +
        color='concentration') +
   theme_minimal()
 ```
+
 In the plots, I see that the simulations with stronger instruments are centered around the true value of beta based on the DGP, while the simulations with weaker instruments are further away from the true value (but are closer to zero as concentration increases), which is what we can also see from the table. In the plot of the test statistics, I'm noticing that the plot for the regressions with the highest covariance between U and V is more spread out around zero, but this is more noticeable for lower concentrations.
 
 # MLDA
 
-# my mini project
+## 1.
+
+CATE = difference in expected mortality rate just after turning 21 versus just before turning 21 = E\[mortality after − mortality before \| age = 21\]
+
+Linear specification: 
+
+$\text{all}_i = \beta_0 + \beta_1 D_i + \beta_2 (agecell - 21)_i + \beta_3 (D_i \cdot (agecell - 21)_i) + u_i$
+
+```{r}
+# dropna and take the two columns i need
+mlda_cols = mlda[c('agecell', 'all')] |> drop_na()
+
+# define the running variable for the regression and the treatment variable
+mlda_cols$D = ifelse(mlda_cols$agecell >= 21, 1, 0)
+mlda_cols$xtilde = mlda_cols$agecell - 21
+```
+
+## 2.
+
+Linear RD:
+```{r}
+rd = lm(all ~ D * xtilde, data=mlda_cols)
+summary(rd)
+```
+
+The CATE for the age of 21 is given by the estimated coefficient on the cutoff variable and is significant at the 0.1% level.
+
+Plotting the data:
+```{r}
+ggplot(mlda_cols, aes(agecell, all, colour=factor(D))) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  theme(legend.position='none')
+```
+
+Mortality rate is going up in age and there's a jump up at age 21, after which it decreases in age. This jump is the CATE that was in the regression above. It shows that being just able to legally access alcohol increases the mortality rate. This may be because people drinking alcohol for the "first" time are more reckless with drinking and more likely to drink heavily due to the relative novelty of alcohol and lack of drinking experience. The reason the mortality rate is increasing in age beforehand may be because it gets easier to illegally drink the older (and closer to legal drinking age) you are.
+
+## 3.
+
+Quadratic RD:
+```{r}
+rd2 = lm(all ~ (xtilde + I(xtilde^2)) * D, data=mlda_cols)
+summary(rd2)
+```
+
+Plotting the data:
+```{r}
+ggplot(mlda_cols, aes(agecell, all, colour=factor(D))) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x + I(x^2)) +
+  theme(legend.position='none')
+```
+
+Now, the CATE is estimated to be larger than in the linear specification, and is still significant at the 0.1% level. I think this is because it is estimated using these curves instead of straight lines. The CATE is still positive, indicating that there is an increase in the mortality rate associated with being at the cutoff.
+
+## 4.
+
+Restrict ages:
+```{r}
+mlda_cols_filter = mlda_cols |>
+  filter(agecell >= 20, agecell <= 22)
+```
+
+Running the linear RD:
+```{r}
+rd_filter = lm(all ~ D * xtilde, data=mlda_cols_filter)
+summary(rd_filter)
+```
+
+Plotting the linear RD:
+```{r}
+ggplot(mlda_cols_filter, aes(agecell, all, colour=factor(D))) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  theme(legend.position='none')
+```
+
+Running the quadratic RD:
+```{r}
+rd2_filter = lm(all ~ (xtilde + I(xtilde^2)) * D, data=mlda_cols_filter)
+summary(rd2_filter)
+```
+
+Plotting the quadratic RD:
+```{r}
+ggplot(mlda_cols_filter, aes(agecell, all, colour=factor(D))) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x + I(x^2)) +
+  theme(legend.position='none')
+```
+
+I am finding pretty much the same CATE in the linear and quadratic specifications of the restricted sample. The CATE is larger in the restricted linear specification than in the unrestricted, but the quadratic ones are similar. This is because the linear model had to fit the lower mortality rates of the more far away age groups, but the quadratic one can use a curve.
