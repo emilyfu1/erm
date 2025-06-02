@@ -1,0 +1,9 @@
+---
+title: "miniproject"
+format: html
+editor: visual
+---
+
+Alan and Ertac evaluate a randomised control trial. They randomly assign an educational intervention.
+
+They are concerned with the correlation between non-cognitive skills and economic outcomes. In particular, existing literature in economics and psychology find that childhood and adolescence is an important period in the development of non-cognitive skills. Patience and self-control displayed in childhood are positively associated with health, labour market, social, and educational outcomes. To 
