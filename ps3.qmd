@@ -262,16 +262,18 @@ replicate_iv_sim = function(n_reps, conc, rho, z) {
   
   # repeat draws
   for (rep in 1:n_reps) {
-    
+    # call draw_sim_data to get each draw
     draws = draw_sim_data(pi=pi, rho=rho, z=z)
     
+    # call get_iv_stats to estimate the model
     iv_results = get_iv_stats(draws)
     
-    # append results to a dataframe    
+    # append results to a dataframe by creating a new row
     new_row = tibble(est=iv_results['est.z'], 
                      se=iv_results['se'], 
                      conc=conc, 
                      rho=rho)
+    # and attaching them
     sims = bind_rows(sims, new_row)    
   }
   
@@ -316,6 +318,7 @@ ggplot(filter_simulations, aes(x=est, colour=factor(conc))) +
   labs(title = 'densities of the 2SLS estimator by concentration', 
        x = 'estimated coefficient', 
        color='concentration') +
+  # make it not uggo
   theme_minimal()
 
 ggplot(filter_simulations, aes(x=est/se, colour=factor(conc))) +
@@ -324,6 +327,7 @@ ggplot(filter_simulations, aes(x=est/se, colour=factor(conc))) +
   labs(title = 'densities of the 2SLS estimator t statistic by concentration', 
        x = 't statistic', 
        color='concentration') +
+  # make it not uggo
   theme_minimal()
 ```
 
