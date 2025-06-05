@@ -1,5 +1,5 @@
 ---
-title: "ps3"
+title: "problem set 3"
 author: "1088708"
 date: "`r Sys.Date()`"
 format: html
@@ -384,6 +384,7 @@ Plotting the data:
 ```{r}
 ggplot(mlda_cols, aes(agecell, all, colour=factor(D))) +
   geom_point() +
+  # plot a quadratic?
   geom_smooth(method='lm', formula = y ~ x + I(x^2)) +
   theme(legend.position='none')
 ```
@@ -422,6 +423,7 @@ Plotting the quadratic RD:
 ```{r}
 ggplot(mlda_cols_filter, aes(agecell, all, colour=factor(D))) +
   geom_point() +
+  # plot a quadratic?
   geom_smooth(method='lm', formula = y ~ x + I(x^2)) +
   theme(legend.position='none')
 ```
