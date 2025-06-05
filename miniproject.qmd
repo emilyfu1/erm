@@ -1,9 +1,87 @@
 ---
-title: "miniproject"
+title: "mini project milestone"
 format: html
 editor: visual
 ---
 
-Alan and Ertac evaluate a randomised control trial. They randomly assign an educational intervention.
+In this paper, Alan and Ertac are concerned with the correlation between non-cognitive skills and economic outcomes. Existing literature in economics and psychology find that childhood and adolescence are important periods in the development of non-cognitive skills. In particular patience and self-control displayed in childhood are positively associated with health, labour market, social, and educational outcomes. In contribution to these findings, Alan and Ertac look at whether these skills can be effectively taught in childhood and subsequently influence future behaviour.
 
-They are concerned with the correlation between non-cognitive skills and economic outcomes. In particular, existing literature in economics and psychology find that childhood and adolescence is an important period in the development of non-cognitive skills. Patience and self-control displayed in childhood are positively associated with health, labour market, social, and educational outcomes. To 
+The experiment design is a phase-in randomised control trial. All public school third-grade teachers in Istanbul, Turkey were contacted about the study. Schools in which there was at least one teacher willing to participate were randomly assigned the educational intervention in three groups, with randomisation occurring at the school level to avoid spillover effects. The initially-treated schools implemented the training across Spring 2013, the control-then-treatment group implemented the training in Fall 2013, and the pure control group never implemented the training. The intervention was delivered by class teachers and focused on small case studies that helped students visualise intertemporal consumption and savings decisions using age-appropriate examples aiming to teach patience to the treated classes. They identify the average treatment effect on the treated, but use the reasons given by teachers for opting out of the study to argue that the teachers opting in do not systematically differ from those opting out.
+
+Prior to the treatment, Alan and Ertac collected data on all students in the randomised samples through student, teacher, and parent surveys. To measure the effectiveness of the treatment, they used administrative data on behavioural conduct and experimental tasks that measured patience. Because the treatment was implemented in different ways by each teacher, Alan and Ertac use the offering of the program rather than the program itself as their treatment variable. These evaluations occurred once immediately after the treatment (Phase 1), once 8 months after the treatment (Phase 2), and then again around three years later (Phase 3). They found that treated students were more patient in the experimental tasks and their administrative records were less likely to indicate poor behaviour. They estimate heterogeneous treatment effects by gender and initial academic standing, finding that these results were persistent up to the second follow-up period after the treatment for girls and academically-stronger students.
+
+The replication materials of this paper include two Stata do-files and two Stata data files. One of the datasets and its corresponding do-file are used only to produce table 8 (phase 3 treatment effects) and the density plot in Figure 2 for phase 3 of the study in the paper. The other dataset contains the rest of the data. These four files are all you need to produce all figures aside from Table 2, for which only the required regressions are provided and not the code that creates the table itself. Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means.
+
+Reproduce table 2: (the summary statistics in the paper)
+
+```{r message=FALSE}
+library(tidyverse)
+library(haven)
+library(estimatr)
+library(knitr)
+library(kableExtra)
+
+
+# location of data
+wd = '/Users/em/desktop/school/erm/replication/'
+
+# import data
+patiencedata = read_dta(paste0(wd, 'PatienceData.dta'))
+```
+
+Getting the right data: The variables in the table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group.
+
+```{r}
+table2_vars = c('male', 'behaviour_score', 'success', 
+                'wealth', 'raven' ,'indrisk1', 'math_score', 'tmale', 'tage')
+
+table_2 = tibble(variable = character(), 
+                 control_mean = character(), 
+                 difference_IT = character(), 
+                 difference_CT = character())
+
+# regress on dummies
+for (var in table2_vars) {
+  # regress var on the two treatment dummies
+  model = lm_robust(as.formula(paste(var, '~ tr16 + tr8')), 
+                    se_type='stata',
+                    clusters = schoolid,
+                    data=patiencedata)
+  
+  # new row with estimates
+  est_control_mean = coef(model)['(Intercept)']
+  est_difference_IT = coef(model)['tr16']
+  est_difference_CT = coef(model)['tr16']
+  
+  # new row with standard errors
+  se_control_mean = sqrt(diag(vcov(model))['(Intercept)'])
+  se_difference_IT = sqrt(diag(vcov(model))['tr16'])
+  se_difference_CT = sqrt(diag(vcov(model))['tr8'])
+  
+  # create a dataframe to merge
+  # this table is kind of hard to format because the coefficients are columns
+  new_row_est_se = tibble(variable = var, 
+                          control_mean=sprintf("%.2f\n(%.2f)", # weird regex
+                                               est_control_mean, 
+                                               se_control_mean), 
+                          difference_IT=sprintf("%.2f\n(%.2f)", 
+                                                est_difference_IT, 
+                                                se_difference_IT), 
+                          difference_CT=sprintf("%.2f\n(%.2f)", 
+                                                est_difference_CT, 
+                                                se_difference_CT))
+
+  # and attaching them
+  table_2 = bind_rows(table_2, new_row_est_se) 
+}
+
+```
+
+Table 2 printout (pretty print):
+
+```{r}
+kbl(table_2) |>
+  kable_styling() |>
+  # i think this uses the newlines
+  column_spec(column=1:ncol(table_2), extra_css='white-space: pre-wrap;')
+```
