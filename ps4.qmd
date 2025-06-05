@@ -1,0 +1,25 @@
+---
+title: "problem set 4"
+format: html
+editor: visual
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(haven)
+library(estimatr)
+
+cardkreuger = read_dta('https://ditraglia.com/data/minwage.dta')
+```
+
+# Airfare
+
+```{r}
+
+```
+
+# Behrens-Fisher
+
+# Minimum Wage
+
+
