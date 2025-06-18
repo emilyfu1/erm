@@ -8,18 +8,325 @@ editor: visual
 library(tidyverse)
 library(haven)
 library(estimatr)
+library(fixest)
+library(broom)
+library(plm)
 
+# import data
+usdot = read_csv('https://ditraglia.com/data/usdot.csv')
 cardkreuger = read_dta('https://ditraglia.com/data/minwage.dta')
+minwage = read_dta('https://ditraglia.com/data/minwage.dta')
+
+# set parameters
+n = 30
+alpha = 0
+beta = 0
 ```
 
 # Airfare
 
+## 1.
 ```{r}
+# create time dummies and log variables
+usdot = usdot |>
+  # i didn't know there was a shortcut to regress with dummies 
+  mutate(year_1998 = if_else(year == 1998, 1, 0), 
+         year_1999 = if_else(year == 1999, 1, 0), 
+         year_2000 = if_else(year == 2000, 1, 0),
+         logdist = log(distance), 
+         logdist_2 = logdist^2, 
+         logairfare = log(airfare))
 
+# regress log(airfare) on market_share, log(dist), log(dist)^2, year dummies
+model = lm(logairfare ~ market_share + logdist + logdist_2 + year_1998 + 
+             year_1999 + year_2000, data=usdot)
 ```
+
+### a)
+Time dummies capture unobserved factors that vary over time but are constant across routes so that we can allow for the common time-varying (unobserved) component of the error term, like inflation or something. The ones for 1999 and 2000 are statisticall significant at the 5% level, and the estimated coefficients get larger for each passing year. Since the dataset ends in 2000, it makes sense for them all to be positive and also increasing since with inflation the prices will increase a little bit each year.
+
+```{r}
+tidy(model)
+```
+
+### b)
+A one percentage point increase in the largest airline that has a particular route is associated with a 0.36% increase in the price of the one-way ticket. That is like the largest airline dominating the market a little more so they have more market power. The 95% confidence interval is given by
+```{r}
+confint(model, parm='market_share')
+```
+
+We are 95% confident that the true effect of a 1 percentage point increase in market share is within 0.30 and 0.42.
+
+### c)
+Clustering by route_id because it's like the only group variable we have?
+```{r}
+model_cluster = lm_robust(logairfare ~ market_share + logdist + logdist_2 + 
+                            year_1998 + year_1999 + year_2000,
+                          data=usdot,
+                          clusters=route_id)
+
+tidy(model_cluster)
+```
+
+These cluster-robust standard errors are larger.
+
+## 2.
+
+### a)
+We have $\frac{d\log(Y)}{dY} = \frac{1}{Y}$ so if you rearrange it you get $d\log(Y) = \frac{dY}{Y}$, or $d\log(X) = \frac{dX}{X}$ for $X$. Then, substitute these and get that the elasticity of $Y$ w/rt. $X$ is given by $\frac{dY/Y}{dX/X} = \frac{d\log(Y)}{d\log(X)}$.
+
+### b)
+Because of the specification for this regression, $\frac{d\log(Y)}{d\log(X)}$ is given by $\hat{\beta}_{logdist} + 2\hat{\beta}_{logdist^2}$
+
+### c)
+```{r}
+# estimated coefficients
+beta_logdist = coef(model_cluster)['logdist']
+beta_logdist_2 = coef(model_cluster)['logdist_2']  
+
+# calculate the elasticities
+usdot = usdot |>
+  mutate(elasticity = beta_logdist + 2 * logdist * beta_logdist_2)
+```
+
+Plotting elasticity and distances:
+```{r}
+ggplot(usdot, aes(x = distance, y = elasticity)) +
+  geom_point()
+```
+
+### d)
+The figure shows that as the distance of a particular route increases, the elasticity of price with respect to distance increases. A 1% increase in distance of a route leads to a larger percentage increase in price when the route is longer. I think this makes sense since the longer the flight, the fewer airlines are likely to offer it. For example, the current world's longest flight is only offered by Singapore Airlines. If there are fewer competing airlines for longer-distance routes, then an airline can raise prices more.
+
+## 3.
+
+### a)
+Fixed effects vary across alternatives but not across time, which is trying to capture the other component of the error term, the individual effect. I think this makes sense to add because different routes have their own characteristics that aren't captured by the variables we have in the data, like region-specific weather patterns and how boring a city is.
+
+### b)
+$\log{airfare_{i,t}} = \alpha_{i} + market\_share_{i,t} + \log{dist_{i}} + (\log{dist_{i}})^2 + (1998 == 1)_{t} + (1999 == 1)_{t} + (2000 == 1)_{t}$
+
+We cannot add time-invariant regressors because they are perfectly collinear with the dummies, meaning that distance can't be added as a regressor. This is because distance is constant for all observations within the same route and so it will always be the same multiple of the corresponding dummy variable for that route. However, that means we can't find $\hat{\beta}_{logdist} + 2\hat{\beta}_{logdist^2}$ which is the elasticity that we derived in question 2.
+
+### c)
+```{r}
+# but remove the dist variables bc they are perfectly collinear with the dummies
+model_fe = feols(logairfare ~ market_share + year_1998 + year_1999 + 
+                   year_2000 | route_id, 
+                 data = usdot,
+                 cluster=~route_id)
+
+tidy(model_fe)
+```
+Now, a one percentage point increase in the largest airline that has a particular route is associated with a 0.16% increase in the price of the one-way ticket when you have include route dummies. I think it makes sense for it to be lower because now we're controlling for routes with higher market_share that also have unobserved features causing higher prices. For example, a route served by a very large airline might also be more popular for business travel. The time dummies are similar in both regressions which is probably just because inflation is just doing its own thing. We also don't have any distance effects, but I think if you're controlling for route-specific things anyways then you don't need to add distance by itself anyways.
+
+## 4.
+
+### a) 
+Tbh I don't really understand this question because if you can't reasonably assume that the individual specific error is uncorrelated with the explanatory variables then you don't even get a consistent estimator anyways so there's no benefit of one or the other just on their own---it depends on if you can assume one or the other in the first place. I thought the two were just an assumption, not actually the model itself? I think if you add the average across time then that variable is correlated with the the unobserved individual-specific error component since it's also individual specific.
+
+### b)
+You can add the individual-specific distance variables here since there won't be perfect multicollinearity, so you can find the elasticity.
+
+$\log{airfare_{i,t}} = \beta_{0} + mean\_market\_share_{i} + market\_share_{i,t} + \log{dist_{i}} + (\log{dist_{i}})^2 + (1998 == 1)_{t} + (1999 == 1)_{t} + (2000 == 1)_{t}$
+
+### c)
+```{r}
+# route averages
+usdot = usdot |>
+  group_by(route_id) |>
+  mutate(market_share_route=mean(market_share))
+
+# estimate the model
+random_effects = plm(logairfare ~ market_share_route + market_share + 
+                       logdist + logdist_2 + year_1998 + year_1999 + year_2000, 
+                     data=usdot)
+
+tidy(random_effects)
+```
+
+### d)
+The estimated coefficient on market_share is the same as in the fixed effects model and the coefficient on the average market_share variable is significant at the 5% level but the standard errors are larger. If there are no individual-specific effects (no serial correlation) in the error term, the random effects GLS and OLS estimators coincide. Pooled OLS is efficient under the one-way error components model (thank u steve bond a true diva)
 
 # Behrens-Fisher
 
+```{r}
+n1 = 3
+sigma = 0.5
+```
+
 # Minimum Wage
 
+## 1.
+```{r}
+minwage = minwage |>
+  # restrict sample
+  filter(sample == 1) |>
+  # rename treatment
+  rename(treat=state) |>
+  mutate(state=ifelse(treat == 1, 'NJ', 'PA')) |>
+  # low wage dummy
+  mutate(lowwage=ifelse(wage_st < 5, 1, 0))
+```
 
+## 2.
+
+### a)
+```{r}
+# wage means by state and wave
+
+# first wave
+
+# NJ
+avg_wave_st_NJ = minwage |> 
+  filter(treat == 1) |> 
+  summarise(mean_wage=mean(wage_st, na.rm=TRUE)) |> 
+  pull(mean_wage)
+
+# PA
+avg_wave_st_PA = minwage |> 
+  filter(treat == 0) |> 
+  summarise(mean_wage=mean(wage_st, na.rm=TRUE)) |> 
+  pull(mean_wage)
+
+# second wave
+
+# NJ
+avg_wave_st2_NJ = minwage |> 
+  filter(treat == 1) |> 
+  summarise(mean_wage=mean(wage_st2, na.rm=TRUE)) |> 
+  pull(mean_wage)
+
+# PA
+avg_wave_st2_PA = minwage |> 
+  filter(treat == 0) |> 
+  summarise(mean_wage=mean(wage_st2, na.rm=TRUE)) |> 
+  pull(mean_wage)
+
+print(paste0('average wave 1 starting wage in NJ: ', avg_wave_st_NJ))
+print(paste0('average wave 2 starting wage in NJ: ', avg_wave_st2_NJ))
+print(paste0('average wave 1 starting wage in PA: ', avg_wave_st_PA))
+print(paste0('average wave 2 starting wage in PA: ', avg_wave_st2_PA))
+```
+
+### b)
+```{r}
+# time differences
+
+# NJ
+d_wave_st_NJ = avg_wave_st2_NJ - avg_wave_st_NJ
+
+# PA
+d_wave_st_PA = avg_wave_st2_PA - avg_wave_st_PA
+
+print(paste0('difference in mean starting wages in NJ: ', d_wave_st_NJ))
+print(paste0('difference in mean starting wages in PA: ', d_wave_st_PA))
+```
+
+### c)
+```{r}
+# state difference
+dd_wave_st = d_wave_st_NJ - d_wave_st_PA
+
+print(paste0('between-state difference-in-differences: ', dd_wave_st))
+```
+
+### d)
+We see that the difference in mean starting wages in the treated state NJ between wave 1 and wave 2 (before and after the increase in minimum wage) is positive. There is a higher starting wage for NJ in wave 2. For the untreated state PA, there is little difference in mean starting wages between the two waves (with no change in minimum wage in between). The differences in these differences is positive, in this case meaning that the treatment state saw a larger increase in mean starting wage in response to the increase in minimum wage. We assume no anticipation effects (employers don't prematurely change starting wages because they know the legislation is changing soon) and no trend (if there was no change in minimum wage, the average starting wage in NJ would not change over the two waves). Then, it appears that the minimum wage increase caused the increase in mean starting wage in NJ, which makes sense since you're raising the minimum for everyone. It would not make sense for employers hiring for low wage positions to "unnecessarily" increase wages in anticipation of this change since the labour would cost them more. Since the two waves occur in the same year, I think it makes sense for the no trend assumption to hold unless there was some kind of big event or short-term inflation or something that I don't know about.
+
+## 3.
+
+### a)
+```{r}
+# wage means by state and wave
+
+# first wave
+
+# NJ
+avg_fte_NJ = minwage |> 
+  filter(treat == 1) |> 
+  summarise(mean_emp=mean(fte, na.rm=TRUE)) |> 
+  pull(mean_emp)
+
+# PA
+avg_fte_PA = minwage |> 
+  filter(treat == 0) |> 
+  summarise(mean_emp=mean(fte, na.rm=TRUE)) |> 
+  pull(mean_emp)
+
+# second wave
+
+# NJ
+avg_fte2_NJ = minwage |> 
+  filter(treat == 1) |> 
+  summarise(mean_emp=mean(fte2, na.rm=TRUE)) |> 
+  pull(mean_emp)
+
+# PA
+avg_fte2_PA = minwage |> 
+  filter(treat == 0) |> 
+  summarise(mean_emp=mean(fte2, na.rm=TRUE)) |> 
+  pull(mean_emp)
+
+print(paste0('average wave 1 full time equivalent employment in NJ: ', 
+             avg_fte_NJ))
+print(paste0('average wave 2 full time equivalent employment in NJ: ', 
+             avg_fte2_NJ))
+print(paste0('average wave 1 full time equivalent employment in PA: ', 
+             avg_fte_PA))
+print(paste0('average wave 2 full time equivalent employment in PA: ', 
+             avg_fte2_PA))
+```
+### b)
+```{r}
+# time differences
+
+# NJ
+d_fte_NJ = avg_fte2_NJ - avg_fte_NJ
+
+# PA
+d_fte_PA = avg_fte2_PA - avg_fte_PA
+
+print(paste0('difference in mean full time equivalent employment in NJ: ', 
+             d_fte_NJ))
+print(paste0('difference in mean full time equivalent employment in PA: ', 
+             d_fte_PA))
+```
+
+### c)
+```{r}
+# state difference
+dd_fte = d_fte_NJ - d_fte_PA
+
+print(paste0('between-state difference-in-differences: ', dd_fte))
+```
+
+### d)
+We see that there is little difference in mean full time equivalent employment in the treated state NJ between wave 1 and wave 2 (before and after the increase in minimum wage). For the untreated state PA, mean full time equivalent employment decreases between wave 1 and wave 2. The differences in these differences is positive, in this case meaning that the treated state saw less of a decrease in mean full time equivalent employment in response to the increase in minimum wage. We assume no anticipation effects (employers don't prematurely change hiring because they know the legislation is changing soon) and no trend (if there was no change in minimum wage, the average employment in NJ would not change over the two waves). This effect could be because workers from PA migrate over to NJ to take advantage of the higher minimum wage. However, this would likely violate the no anticipation effects assumption since these changes are usually announced beforehand and anyone who notices it in the news might consider moving.
+
+## 4.
+```{r}
+# take wave 1 data
+wave1 = minwage[c('state', 'wage_st', 'fte', 'chain', 
+                 'co_owned', 'sheet', 'treat')] |>
+  # add the time dummy
+  mutate(post = 0) |>
+  rename(restaurant_id = sheet)
+
+# take wave 2 data
+wave2 = minwage[c('state', 'wage_st2', 'fte2', 'chain', 
+                 'co_owned', 'sheet', 'treat')] |>
+  # add the time dummy
+  mutate(post = 1) |>
+  # rename things to make them readable/make the merge happen
+  rename(wage_st = wage_st2, 
+         fte = fte2, 
+         restaurant_id = sheet)
+
+# concat to make one long dataframe
+both_waves = bind_rows(wave1, wave2)
+```
+
+## 5.
+
+## 6.
