@@ -242,7 +242,7 @@ We see that the difference in mean starting wages in the treated state NJ betwee
 
 # first wave
 
-# NJ
+# NJ (grab only treat = 1 observations and take that as a variable)
 avg_fte_NJ = minwage |> 
   filter(treat == 1) |> 
   summarise(mean_emp=mean(fte, na.rm=TRUE)) |> 
@@ -308,14 +308,14 @@ We see that there is little difference in mean full time equivalent employment i
 ```{r}
 # take wave 1 data
 wave1 = minwage[c('state', 'wage_st', 'fte', 'chain', 
-                 'co_owned', 'sheet', 'treat')] |>
+                 'co_owned', 'sheet', 'treat', 'lowwage')] |>
   # add the time dummy
   mutate(post = 0) |>
   rename(restaurant_id = sheet)
 
 # take wave 2 data
 wave2 = minwage[c('state', 'wage_st2', 'fte2', 'chain', 
-                 'co_owned', 'sheet', 'treat')] |>
+                 'co_owned', 'sheet', 'treat', 'lowwage')] |>
   # add the time dummy
   mutate(post = 1) |>
   # rename things to make them readable/make the merge happen
@@ -329,4 +329,88 @@ both_waves = bind_rows(wave1, wave2)
 
 ## 5.
 
+### a)
+$\beta_{0}$: value of the outcome variable for the untreated group in the first survey wave
+$\beta_{1}$: difference in the outcome variable for the treated and untreated groups in the first survey wave
+$\beta_{2}$: difference in the outcome variable for the untreated groups between the first and second survey wave. This is the time difference for the untreated group like in the p. Similarly, the time difference for the treated group is given by $\beta_{2} + \beta_{3}$. This means that the difference-in-differences is given by $\beta_{3}$.
+
+### b)
+I clustered by chain because maybe different restaurant chains have some unique characteristics like different employee transfer rules or different hiring practices. The estimated differences-in-differences effect is the same the results in part 2. I can also see that the coefficient on `post` is not significantly different from 0, while the differences-in-differences estimate is.
+```{r}
+# outcome variable wage_st + interaction term
+model_dd_wage_st = lm_robust(wage_st ~ treat * post, 
+                     data=both_waves,
+                     clusters=chain)
+
+summary(model_dd_wage_st)
+```
+
+### c)
+The estimated differences-in-differences effect is also the same here as the results in part 3. Here, there are no statistically significant coefficients aside from the intercept.
+```{r}
+# outcome variable fte + interaction term
+model_dd_fte = lm_robust(fte ~ treat * post, 
+                     data=both_waves,
+                     clusters=chain)
+
+summary(model_dd_fte)
+```
+
+### d)
+```{r}
+# outcome variable wage_st with clustering by chain and dummies and co_owned
+model_dd_wage_st_c = lm_robust(wage_st ~ co_owned + 
+                                 treat * post + factor(chain), 
+                     data=both_waves,
+                     clusters=chain)
+
+# outcome variable fte with clustering by chain and dummies and co_owned
+model_dd_fte_c = lm_robust(fte ~ co_owned + 
+                             treat * post + factor(chain), 
+                     data=both_waves,
+                     clusters=chain)
+
+summary(model_dd_wage_st_c)
+summary(model_dd_fte_c)
+```
+
+### e)
+The differences-in-differences estimates are the same as in the previous parts. I think this is because we added some things that aren't time varying so then you can't control for time-related stuff with those.
+
 ## 6.
+
+### a)
+I don't exactly understand why this question is different from the one in question 2 but in terms of the regression itself we need there to be no other state-specific events that only impact one of the states but not the other, which seems to be reasonable since the states are really close to each other and chain restaurants are generally supposed to be similar from location to location. Also, I think we need the same restaurants to be represented in both waves (like if one chain closes a lot of locations due to the change, then I don't think you can say that you're estimating the true effect of raising minimum wage).
+
+### b)
+The time difference for the low wage group is given by $\hat{\beta_{2}} + \hat{\beta_{3}} = -0.004091 + 0.615872$. These wages increased. The time difference for the high wage group is given by $\hat{\beta_{2}} = -0.004091$, which we don't find to be significantly different from zero. The differences-in-differences estimate says that the starting wages increased more for the low wage restaurants than the high wage restaurants.
+```{r}
+# get NJ data
+both_waves_NJ = both_waves |>
+  filter(treat == 1)
+
+# run regression on low wage vs non-low wage in NJ only
+model_NJ = lm_robust(wage_st ~ lowwage * post, 
+                     data=both_waves_NJ,
+                     clusters=chain)
+
+summary(model_NJ)
+```
+
+### c)
+For this regression we need the low-wage and high-wage NJ restaurants to follow the same wage setting trends in the absence of the minimum wage law. This is probably not realistic since low and high starting wages may reflect differences in the work tasks required in different restaurants or different locations (like cities with higher costs of living).
+
+### d)
+The time difference for the low wage group is given by $\hat{\beta_{2}} + \hat{\beta_{3}} = -0.2652 + 0.3536$. These wages increased. The time difference for the high wage group is given by $\hat{\beta_{2}} = -0.2652$, which is actually significantly different from zero. Similarly to in NJ, the differences-in-differences estimate says that the starting wages increased more for the low wage restaurants than the high wage restaurants (but is lower than in NJ). This means there was probably a bit of wage adjustment in PA in response to the change in NJ because employers with low-wage employees in PA didn't want all their employees to move away for higher-paying jobs.
+```{r}
+# get PA data in a kind of complicated way i think
+both_waves_PA = both_waves |>
+  filter(treat == 0)
+
+# run regression on low wage vs non-low wage in PA only
+model_PA = lm_robust(wage_st ~ lowwage * post, 
+                     data=both_waves_PA,
+                     clusters=chain)
+
+summary(model_PA)
+```
