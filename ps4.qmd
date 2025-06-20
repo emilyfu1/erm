@@ -10,7 +10,13 @@ library(haven)
 library(estimatr)
 library(fixest)
 library(broom)
+library(purrr)
 library(plm)
+library(future)
+library(future.apply)
+
+# parallel processing thingy
+plan(multisession)
 
 # import data
 usdot = read_csv('https://ditraglia.com/data/usdot.csv')
@@ -21,6 +27,8 @@ minwage = read_dta('https://ditraglia.com/data/minwage.dta')
 n = 30
 alpha = 0
 beta = 0
+seed = 42069
+set.seed(seed)
 ```
 
 # Airfare
@@ -150,10 +158,302 @@ The estimated coefficient on market_share is the same as in the fixed effects mo
 
 # Behrens-Fisher
 
+## 1.
+This is not balanced since much more observations will have $D=0$ than $D=1$.
 ```{r}
 n1 = 3
+n0 = n - n1
 sigma = 0.5
+
+# generate dummy variables according to n1 and n - n1
+D = c(rep(1, n1), rep(0,n0)) 
+
+# generating the u_is with the heteroskedasticity
+u = rnorm(n, mean=0, sd=ifelse(D == 1, 1, sigma))
+
+# generating Y using alpha, beta, and u
+Y = alpha + beta * D + u
 ```
+
+
+## 2.
+```{r}
+# get group means of Y
+Y_1_bar = mean(Y[D == 1])
+Y_0_bar = mean(Y[D == 0])
+
+# get ols estimator
+beta_hat = Y_1_bar - Y_0_bar
+
+# residual sums of squares
+RSS_0 = sum((Y[D == 0] - Y_0_bar)^2)
+RSS_1 = sum((Y[D == 1] - Y_1_bar)^2)
+
+# the various flavors of “robust” standard errors
+
+# regular
+se_usual = sqrt((n / (n0 * n1)) * ((RSS_0 + RSS_1) / (n - 2)))
+print(paste0('non-robust standard error: ', se_usual))
+
+# HC0
+se_0 = sqrt((RSS_0 / n0^2) + (RSS_1 / n1^2)) 
+print(paste0('HC0: ', se_0))
+
+# HC1
+se_1 = sqrt((n / (n - 2)) * (RSS_0 / n0^2 + RSS_1 / n1^2))
+print(paste0('HC1: ', se_1))
+
+# HC2
+se_2 = sqrt((RSS_0 / (n0 * (n0 - 1))) + (RSS_1 / (n1 * (n1 - 1)))) 
+print(paste0('HC2: ', se_2))
+
+# HC3
+se_3 = sqrt((RSS_0 / (n0 - 1)^2) + (RSS_1 / (n1 - 1)^2))  
+print(paste0('HC3: ', se_3))
+```
+Check these with the lm and lm_robust output:
+```{r}
+# run OLS
+model_sim = lm(Y ~ D)
+model_sim_robust = lm_robust(Y ~ D)
+
+# non-robust standard error
+summary(model_sim)$coefficients['D', 'Std. Error']
+
+# robust standard errors
+model_sim_HC0 = lm_robust(Y ~ D, se_type='HC0')
+model_sim_HC0$std.error['D']
+
+model_sim_HC1 = lm_robust(Y ~ D, se_type='HC1')
+model_sim_HC1$std.error['D']
+
+model_sim_HC2 = lm_robust(Y ~ D, se_type='HC2')
+model_sim_HC2$std.error['D']
+
+model_sim_HC3 = lm_robust(Y ~ D, se_type='HC3')
+model_sim_HC3$std.error['D']
+```
+
+## 3.
+I think having $\sigma = 0.5$ is more heteroskedasticity than $\sigma = 1$ since when $\sigma = 1$, the variance of $u_i$ is always 1 and that's homoskedastic, but for $\sigma = 0.5$ the variance of u_i varies with the value of $D_i$.
+
+Functions:
+```{r}
+# with locally defined parameters
+draw_sim_data = function(sigma, n1, n=30, alpha=0, beta=0) {
+  
+  # define n0
+  n0 = n - n1
+  
+  # generate dummy variables according to n1 and n - n1
+  D = c(rep(1, n1), rep(0, n0)) 
+  
+  # generating the u_is with the heteroskedasticity
+  u = rnorm(n, mean=0, sd=ifelse(D == 1, 1, sigma))
+  
+  # generating Y using alpha, beta, and u
+  Y = alpha + beta * D + u
+  
+  return(tibble(sim_Y = Y, 
+                sim_D = D, 
+                sim_u = u))
+}
+
+compute_SEs = function(sim_data) {
+  # redefine all these things again
+  Y = sim_data$sim_Y
+  D = sim_data$sim_D
+  n = nrow(sim_data)
+  n1 = length(filter(sim_data, sim_data$sim_D == 1))
+  n0 = n - n1
+  
+  # get group means of Y
+  Y_1_bar = mean(Y[D == 1])
+  Y_0_bar = mean(Y[D == 0])
+  
+  # get ols estimator
+  beta_hat = Y_1_bar - Y_0_bar
+  
+  # residual sums of squares
+  RSS_0 = sum((Y[D == 0] - Y_0_bar)^2)
+  RSS_1 = sum((Y[D == 1] - Y_1_bar)^2)
+  
+  # the various flavors of “robust” standard errors
+  
+  # regular
+  se_usual = sqrt((n / (n0 * n1)) * ((RSS_0 + RSS_1) / (n - 2)))
+  
+  # HC0
+  se_0 = sqrt((RSS_0 / n0^2) + (RSS_1 / n1^2)) 
+  
+  # HC1
+  se_1 = sqrt((n / (n - 2)) * (RSS_0 / n0^2 + RSS_1 / n1^2))
+  
+  # HC2
+  se_2 = sqrt((RSS_0 / (n0 * (n0 - 1))) + (RSS_1 / (n1 * (n1 - 1)))) 
+  
+  # HC3
+  se_3 = sqrt((RSS_0 / (n0 - 1)^2) + (RSS_1 / (n1 - 1)^2))  
+  
+  # return all the standard errors and stuff 
+  return(list(beta_hat = beta_hat,
+              se_nonrobust = se_usual, 
+              se_HC0 = se_0,
+              se_HC1 = se_1,
+              se_HC2 = se_2,
+              se_HC3 = se_3))
+}
+
+get_sim_results = function(sigma, n1, n_reps=1e5) {
+  
+  # store results to a dataframe
+  sims = tibble(beta_hat=numeric(), 
+                se_nonrobust=numeric(), 
+                se_HC0=numeric(), 
+                se_HC1=numeric(),
+                se_HC2=numeric(),
+                se_HC3=numeric())
+  
+  # repeat draws
+  for (rep in 1:n_reps) {
+    # call draw_sim_data to get each draw
+    draws = draw_sim_data(sigma=sigma, n1=n1)
+    
+    # call compute_SEs to get all the estimates
+    estimates = compute_SEs(draws)
+    
+    # append results to a dataframe by creating a new row
+    new_row = tibble(beta_hat=estimates$beta_hat, 
+                     se_nonrobust=estimates$se_nonrobust, 
+                     se_HC0=estimates$se_HC0, 
+                     se_HC1=estimates$se_HC1, 
+                     se_HC2=estimates$se_HC2, 
+                     se_HC3=estimates$se_HC3)
+    
+    # and attaching them
+    sims = bind_rows(sims, new_row)    
+  }
+  
+  # return results
+  return(sims)
+}
+
+# this is the future one which i don't totally get tbh
+get_sim_results_p = function(sigma, n1, n_reps=1e5) {
+  # futurise the replications
+  results=future_lapply(1:n_reps, function(rep) {
+    draws=draw_sim_data(sigma=sigma, n1=n1)
+    compute_SEs(draws)}, 
+    future.seed = TRUE)
+  
+  # convert the parallelised stuff to tibble
+  sims = map_dfr(results, 
+                 ~ tibble(beta_hat = .x$beta_hat,
+                          se_nonrobust = .x$se_nonrobust,
+                          se_HC0 = .x$se_HC0,
+                          se_HC1 = .x$se_HC1,
+                          se_HC2 = .x$se_HC2,
+                          se_HC3 = .x$se_HC3))
+  
+  return(sims)
+  return(sims)
+}
+
+# sampling distribution, rejection rates
+samplingdist_rejections_sims = function(sims) {
+  # constructing the t statistic and such
+  sims = sims |>
+    # i keep forgetting you can have multiple arguments in mutate
+    mutate(t_nonrobust = beta_hat / se_nonrobust, # the t statistics
+           t_HC0 = beta_hat / se_HC0,
+           t_HC1 = beta_hat / se_HC1,
+           t_HC2 = beta_hat / se_HC2,
+           t_HC3 = beta_hat / se_HC3,
+           # the rejections
+           reject_nonrobust = ifelse(abs(t_nonrobust) > 1.96, 1, 0),
+           reject_HC0 = ifelse(abs(t_HC0) > 1.96, 1, 0), 
+           reject_HC1 = ifelse(abs(t_HC1) > 1.96, 1, 0), 
+           reject_HC2 = ifelse(abs(t_HC2) > 1.96, 1, 0), 
+           reject_HC3 = ifelse(abs(t_HC3) > 1.96, 1, 0))
+  
+  # sampling distributions of the estimated values
+  for (i in c('beta_hat', 'se_nonrobust', 'se_HC0', 
+              'se_HC1', 'se_HC2', 'se_HC3')) {
+    # get mean and true standard error
+    print(paste0('mean (', i, '): ', mean(coconutshavewaterinthem[[i]])))
+    print(paste0('se (', i, '): ', sd(coconutshavewaterinthem[[i]])))
+  }
+  
+  # rejection rates for the t statistic
+  print(sims |>
+    summarise(rate_nonrobust = mean(reject_nonrobust), 
+              reject_rate_HC0 = mean(reject_HC0),
+              reject_rate_HC1 = mean(reject_HC1),
+              reject_rate_HC2 = mean(reject_HC2),
+              reject_rate_HC3 = mean(reject_HC3)))
+  
+  return(sims)
+}
+```
+
+Getting the data:
+```{r}
+sim1 = get_sim_results_p(sigma=0.5, n1 = 3)
+```
+
+The sampling distribution of $\hat{\beta}$:
+```{r}
+sim1 = samplingdist_rejections_sims(sim1)
+```
+
+## 4.
+
+### Part 1
+Getting the data:
+```{r}
+sim2 = get_sim_results_p(sigma=0.85, n1 = 3)
+```
+
+The sampling distribution of $\hat{\beta}$:
+```{r}
+sim2 = samplingdist_rejections_sims(sim2)
+```
+I think having $\sigma = 0.85$ is less heteroskedasticity than $\sigma = 0.5$ since when $\sigma = 0.5$, the variance of $u_i$ is either $1$ or $0.25$, which are not as close together as $\sigma = 0.85$, where the variance of u_i varies with the value of $D_i$ but varies between $\sqrt{0.85}$ and $1$, which are closer together.
+
+### Part 2
+Getting the data:
+```{r}
+sim3 = get_sim_results_p(sigma=1, n1 = 3)
+```
+
+The sampling distribution of $\hat{\beta}$:
+```{r}
+sim3 = samplingdist_rejections_sims(sim3)
+```
+
+This is the one that doesn't have heteroskedasticity since the variance is always constant and therefore doesn't vary with $D_i$.
+
+## 5.
+Merging the data:
+```{r}
+combined_results = bind_rows(sim1 |> mutate(sigma = 0.5),
+                             sim2 |> mutate(sigma = 0.85),
+                             sim3 |> mutate(sigma = 1))
+```
+
+Plotting:
+```{r}
+# plot density by sigma (colours applied by sigma)
+ggplot(data=combined_results, aes(x=beta_hat, group=sigma, 
+                                  fill=factor(sigma))) +
+  # this is because i am slightly blind
+  coord_cartesian(xlim = c(-1, 1)) +
+  # i don't really understand what this does but it's in the documentation
+  geom_density(adjust=1.5, alpha=.4)
+```
+
+## 6.
+The sample distributions looks very similar. It's not necessarily that the one with $\sigma=0.5$ is more right skewed than the one with $\sigma=0.85$, it's more like it just has a different shape than the other two. However, both show finite sample bias compared to the no-heteroskedasticity simulation There are few, only three, "treated" observations $D_i = 1$ in all three simulations and these guys all have a higher variance than the untreated observations. In the $\sigma=0.5$ simulation, the rejection rate is higher when using the non-robust standard error, but in the $\sigma=0.85$ and $\sigma=1$ simulations the opposite is true.
 
 # Minimum Wage
 
