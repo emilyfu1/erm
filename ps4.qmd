@@ -34,6 +34,7 @@ set.seed(seed)
 # Airfare
 
 ## 1.
+
 ```{r}
 # create time dummies and log variables
 usdot = usdot |>
@@ -51,6 +52,7 @@ model = lm(logairfare ~ market_share + logdist + logdist_2 + year_1998 +
 ```
 
 ### a)
+
 Time dummies capture unobserved factors that vary over time but are constant across routes so that we can allow for the common time-varying (unobserved) component of the error term, like inflation or something. The ones for 1999 and 2000 are statisticall significant at the 5% level, and the estimated coefficients get larger for each passing year. Since the dataset ends in 2000, it makes sense for them all to be positive and also increasing since with inflation the prices will increase a little bit each year.
 
 ```{r}
@@ -58,7 +60,9 @@ tidy(model)
 ```
 
 ### b)
+
 A one percentage point increase in the largest airline that has a particular route is associated with a 0.36% increase in the price of the one-way ticket. That is like the largest airline dominating the market a little more so they have more market power. The 95% confidence interval is given by
+
 ```{r}
 confint(model, parm='market_share')
 ```
@@ -66,7 +70,9 @@ confint(model, parm='market_share')
 We are 95% confident that the true effect of a 1 percentage point increase in market share is within 0.30 and 0.42.
 
 ### c)
+
 Clustering by route_id because it's like the only group variable we have?
+
 ```{r}
 model_cluster = lm_robust(logairfare ~ market_share + logdist + logdist_2 + 
                             year_1998 + year_1999 + year_2000,
@@ -81,12 +87,15 @@ These cluster-robust standard errors are larger.
 ## 2.
 
 ### a)
+
 We have $\frac{d\log(Y)}{dY} = \frac{1}{Y}$ so if you rearrange it you get $d\log(Y) = \frac{dY}{Y}$, or $d\log(X) = \frac{dX}{X}$ for $X$. Then, substitute these and get that the elasticity of $Y$ w/rt. $X$ is given by $\frac{dY/Y}{dX/X} = \frac{d\log(Y)}{d\log(X)}$.
 
 ### b)
+
 Because of the specification for this regression, $\frac{d\log(Y)}{d\log(X)}$ is given by $\hat{\beta}_{logdist} + 2\hat{\beta}_{logdist^2}$
 
 ### c)
+
 ```{r}
 # estimated coefficients
 beta_logdist = coef(model_cluster)['logdist']
@@ -98,25 +107,30 @@ usdot = usdot |>
 ```
 
 Plotting elasticity and distances:
+
 ```{r}
 ggplot(usdot, aes(x = distance, y = elasticity)) +
   geom_point()
 ```
 
 ### d)
+
 The figure shows that as the distance of a particular route increases, the elasticity of price with respect to distance increases. A 1% increase in distance of a route leads to a larger percentage increase in price when the route is longer. I think this makes sense since the longer the flight, the fewer airlines are likely to offer it. For example, the current world's longest flight is only offered by Singapore Airlines. If there are fewer competing airlines for longer-distance routes, then an airline can raise prices more.
 
 ## 3.
 
 ### a)
+
 Fixed effects vary across alternatives but not across time, which is trying to capture the other component of the error term, the individual effect. I think this makes sense to add because different routes have their own characteristics that aren't captured by the variables we have in the data, like region-specific weather patterns and how boring a city is.
 
 ### b)
+
 $\log{airfare_{i,t}} = \alpha_{i} + market\_share_{i,t} + \log{dist_{i}} + (\log{dist_{i}})^2 + (1998 == 1)_{t} + (1999 == 1)_{t} + (2000 == 1)_{t}$
 
 We cannot add time-invariant regressors because they are perfectly collinear with the dummies, meaning that distance can't be added as a regressor. This is because distance is constant for all observations within the same route and so it will always be the same multiple of the corresponding dummy variable for that route. However, that means we can't find $\hat{\beta}_{logdist} + 2\hat{\beta}_{logdist^2}$ which is the elasticity that we derived in question 2.
 
 ### c)
+
 ```{r}
 # but remove the dist variables bc they are perfectly collinear with the dummies
 model_fe = feols(logairfare ~ market_share + year_1998 + year_1999 + 
@@ -126,19 +140,23 @@ model_fe = feols(logairfare ~ market_share + year_1998 + year_1999 +
 
 tidy(model_fe)
 ```
+
 Now, a one percentage point increase in the largest airline that has a particular route is associated with a 0.16% increase in the price of the one-way ticket when you have include route dummies. I think it makes sense for it to be lower because now we're controlling for routes with higher market_share that also have unobserved features causing higher prices. For example, a route served by a very large airline might also be more popular for business travel. The time dummies are similar in both regressions which is probably just because inflation is just doing its own thing. We also don't have any distance effects, but I think if you're controlling for route-specific things anyways then you don't need to add distance by itself anyways.
 
 ## 4.
 
-### a) 
+### a)
+
 Tbh I don't really understand this question because if you can't reasonably assume that the individual specific error is uncorrelated with the explanatory variables then you don't even get a consistent estimator anyways so there's no benefit of one or the other just on their own---it depends on if you can assume one or the other in the first place. I thought the two were just an assumption, not actually the model itself? I think if you add the average across time then that variable is correlated with the the unobserved individual-specific error component since it's also individual specific.
 
 ### b)
+
 You can add the individual-specific distance variables here since there won't be perfect multicollinearity, so you can find the elasticity.
 
 $\log{airfare_{i,t}} = \beta_{0} + mean\_market\_share_{i} + market\_share_{i,t} + \log{dist_{i}} + (\log{dist_{i}})^2 + (1998 == 1)_{t} + (1999 == 1)_{t} + (2000 == 1)_{t}$
 
 ### c)
+
 ```{r}
 # route averages
 usdot = usdot |>
@@ -154,12 +172,15 @@ tidy(random_effects)
 ```
 
 ### d)
+
 The estimated coefficient on market_share is the same as in the fixed effects model and the coefficient on the average market_share variable is significant at the 5% level but the standard errors are larger. If there are no individual-specific effects (no serial correlation) in the error term, the random effects GLS and OLS estimators coincide. Pooled OLS is efficient under the one-way error components model (thank u steve bond a true diva)
 
 # Behrens-Fisher
 
 ## 1.
+
 This is not balanced since much more observations will have $D=0$ than $D=1$.
+
 ```{r}
 n1 = 3
 n0 = n - n1
@@ -175,8 +196,8 @@ u = rnorm(n, mean=0, sd=ifelse(D == 1, 1, sigma))
 Y = alpha + beta * D + u
 ```
 
-
 ## 2.
+
 ```{r}
 # get group means of Y
 Y_1_bar = mean(Y[D == 1])
@@ -211,7 +232,9 @@ print(paste0('HC2: ', se_2))
 se_3 = sqrt((RSS_0 / (n0 - 1)^2) + (RSS_1 / (n1 - 1)^2))  
 print(paste0('HC3: ', se_3))
 ```
+
 Check these with the lm and lm_robust output:
+
 ```{r}
 # run OLS
 model_sim = lm(Y ~ D)
@@ -235,9 +258,11 @@ model_sim_HC3$std.error['D']
 ```
 
 ## 3.
+
 I think having $\sigma = 0.5$ is more heteroskedasticity than $\sigma = 1$ since when $\sigma = 1$, the variance of $u_i$ is always 1 and that's homoskedastic, but for $\sigma = 0.5$ the variance of u_i varies with the value of $D_i$.
 
 Functions:
+
 ```{r}
 # with locally defined parameters
 draw_sim_data = function(sigma, n1, n=30, alpha=0, beta=0) {
@@ -380,8 +405,8 @@ samplingdist_rejections_sims = function(sims) {
   for (i in c('beta_hat', 'se_nonrobust', 'se_HC0', 
               'se_HC1', 'se_HC2', 'se_HC3')) {
     # get mean and true standard error
-    print(paste0('mean (', i, '): ', mean(coconutshavewaterinthem[[i]])))
-    print(paste0('se (', i, '): ', sd(coconutshavewaterinthem[[i]])))
+    print(paste0('mean (', i, '): ', mean(sims[[i]])))
+    print(paste0('se (', i, '): ', sd(sims[[i]])))
   }
   
   # rejection rates for the t statistic
@@ -397,11 +422,13 @@ samplingdist_rejections_sims = function(sims) {
 ```
 
 Getting the data:
+
 ```{r}
 sim1 = get_sim_results_p(sigma=0.5, n1 = 3)
 ```
 
 The sampling distribution of $\hat{\beta}$:
+
 ```{r}
 sim1 = samplingdist_rejections_sims(sim1)
 ```
@@ -409,24 +436,31 @@ sim1 = samplingdist_rejections_sims(sim1)
 ## 4.
 
 ### Part 1
+
 Getting the data:
+
 ```{r}
 sim2 = get_sim_results_p(sigma=0.85, n1 = 3)
 ```
 
 The sampling distribution of $\hat{\beta}$:
+
 ```{r}
 sim2 = samplingdist_rejections_sims(sim2)
 ```
+
 I think having $\sigma = 0.85$ is less heteroskedasticity than $\sigma = 0.5$ since when $\sigma = 0.5$, the variance of $u_i$ is either $1$ or $0.25$, which are not as close together as $\sigma = 0.85$, where the variance of u_i varies with the value of $D_i$ but varies between $\sqrt{0.85}$ and $1$, which are closer together.
 
 ### Part 2
+
 Getting the data:
+
 ```{r}
 sim3 = get_sim_results_p(sigma=1, n1 = 3)
 ```
 
 The sampling distribution of $\hat{\beta}$:
+
 ```{r}
 sim3 = samplingdist_rejections_sims(sim3)
 ```
@@ -434,7 +468,9 @@ sim3 = samplingdist_rejections_sims(sim3)
 This is the one that doesn't have heteroskedasticity since the variance is always constant and therefore doesn't vary with $D_i$.
 
 ## 5.
+
 Merging the data:
+
 ```{r}
 combined_results = bind_rows(sim1 |> mutate(sigma = 0.5),
                              sim2 |> mutate(sigma = 0.85),
@@ -442,6 +478,7 @@ combined_results = bind_rows(sim1 |> mutate(sigma = 0.5),
 ```
 
 Plotting:
+
 ```{r}
 # plot density by sigma (colours applied by sigma)
 ggplot(data=combined_results, aes(x=beta_hat, group=sigma, 
@@ -453,11 +490,13 @@ ggplot(data=combined_results, aes(x=beta_hat, group=sigma,
 ```
 
 ## 6.
+
 The sample distributions looks very similar. It's not necessarily that the one with $\sigma=0.5$ is more right skewed than the one with $\sigma=0.85$, it's more like it just has a different shape than the other two. However, both show finite sample bias compared to the no-heteroskedasticity simulation There are few, only three, "treated" observations $D_i = 1$ in all three simulations and these guys all have a higher variance than the untreated observations. In the $\sigma=0.5$ simulation, the rejection rate is higher when using the non-robust standard error, but in the $\sigma=0.85$ and $\sigma=1$ simulations the opposite is true.
 
 # Minimum Wage
 
 ## 1.
+
 ```{r}
 minwage = minwage |>
   # restrict sample
@@ -472,6 +511,7 @@ minwage = minwage |>
 ## 2.
 
 ### a)
+
 ```{r}
 # wage means by state and wave
 
@@ -510,6 +550,7 @@ print(paste0('average wave 2 starting wage in PA: ', avg_wave_st2_PA))
 ```
 
 ### b)
+
 ```{r}
 # time differences
 
@@ -524,6 +565,7 @@ print(paste0('difference in mean starting wages in PA: ', d_wave_st_PA))
 ```
 
 ### c)
+
 ```{r}
 # state difference
 dd_wave_st = d_wave_st_NJ - d_wave_st_PA
@@ -532,11 +574,13 @@ print(paste0('between-state difference-in-differences: ', dd_wave_st))
 ```
 
 ### d)
+
 We see that the difference in mean starting wages in the treated state NJ between wave 1 and wave 2 (before and after the increase in minimum wage) is positive. There is a higher starting wage for NJ in wave 2. For the untreated state PA, there is little difference in mean starting wages between the two waves (with no change in minimum wage in between). The differences in these differences is positive, in this case meaning that the treatment state saw a larger increase in mean starting wage in response to the increase in minimum wage. We assume no anticipation effects (employers don't prematurely change starting wages because they know the legislation is changing soon) and no trend (if there was no change in minimum wage, the average starting wage in NJ would not change over the two waves). Then, it appears that the minimum wage increase caused the increase in mean starting wage in NJ, which makes sense since you're raising the minimum for everyone. It would not make sense for employers hiring for low wage positions to "unnecessarily" increase wages in anticipation of this change since the labour would cost them more. Since the two waves occur in the same year, I think it makes sense for the no trend assumption to hold unless there was some kind of big event or short-term inflation or something that I don't know about.
 
 ## 3.
 
 ### a)
+
 ```{r}
 # wage means by state and wave
 
@@ -577,7 +621,9 @@ print(paste0('average wave 1 full time equivalent employment in PA: ',
 print(paste0('average wave 2 full time equivalent employment in PA: ', 
              avg_fte2_PA))
 ```
+
 ### b)
+
 ```{r}
 # time differences
 
@@ -594,6 +640,7 @@ print(paste0('difference in mean full time equivalent employment in PA: ',
 ```
 
 ### c)
+
 ```{r}
 # state difference
 dd_fte = d_fte_NJ - d_fte_PA
@@ -602,9 +649,11 @@ print(paste0('between-state difference-in-differences: ', dd_fte))
 ```
 
 ### d)
+
 We see that there is little difference in mean full time equivalent employment in the treated state NJ between wave 1 and wave 2 (before and after the increase in minimum wage). For the untreated state PA, mean full time equivalent employment decreases between wave 1 and wave 2. The differences in these differences is positive, in this case meaning that the treated state saw less of a decrease in mean full time equivalent employment in response to the increase in minimum wage. We assume no anticipation effects (employers don't prematurely change hiring because they know the legislation is changing soon) and no trend (if there was no change in minimum wage, the average employment in NJ would not change over the two waves). This effect could be because workers from PA migrate over to NJ to take advantage of the higher minimum wage. However, this would likely violate the no anticipation effects assumption since these changes are usually announced beforehand and anyone who notices it in the news might consider moving.
 
 ## 4.
+
 ```{r}
 # take wave 1 data
 wave1 = minwage[c('state', 'wage_st', 'fte', 'chain', 
@@ -630,12 +679,13 @@ both_waves = bind_rows(wave1, wave2)
 ## 5.
 
 ### a)
-$\beta_{0}$: value of the outcome variable for the untreated group in the first survey wave
-$\beta_{1}$: difference in the outcome variable for the treated and untreated groups in the first survey wave
-$\beta_{2}$: difference in the outcome variable for the untreated groups between the first and second survey wave. This is the time difference for the untreated group like in the p. Similarly, the time difference for the treated group is given by $\beta_{2} + \beta_{3}$. This means that the difference-in-differences is given by $\beta_{3}$.
+
+$\beta_{0}$: value of the outcome variable for the untreated group in the first survey wave $\beta_{1}$: difference in the outcome variable for the treated and untreated groups in the first survey wave $\beta_{2}$: difference in the outcome variable for the untreated groups between the first and second survey wave. This is the time difference for the untreated group like in the p. Similarly, the time difference for the treated group is given by $\beta_{2} + \beta_{3}$. This means that the difference-in-differences is given by $\beta_{3}$.
 
 ### b)
+
 I clustered by chain because maybe different restaurant chains have some unique characteristics like different employee transfer rules or different hiring practices. The estimated differences-in-differences effect is the same the results in part 2. I can also see that the coefficient on `post` is not significantly different from 0, while the differences-in-differences estimate is.
+
 ```{r}
 # outcome variable wage_st + interaction term
 model_dd_wage_st = lm_robust(wage_st ~ treat * post, 
@@ -646,7 +696,9 @@ summary(model_dd_wage_st)
 ```
 
 ### c)
+
 The estimated differences-in-differences effect is also the same here as the results in part 3. Here, there are no statistically significant coefficients aside from the intercept.
+
 ```{r}
 # outcome variable fte + interaction term
 model_dd_fte = lm_robust(fte ~ treat * post, 
@@ -657,6 +709,7 @@ summary(model_dd_fte)
 ```
 
 ### d)
+
 ```{r}
 # outcome variable wage_st with clustering by chain and dummies and co_owned
 model_dd_wage_st_c = lm_robust(wage_st ~ co_owned + 
@@ -675,15 +728,19 @@ summary(model_dd_fte_c)
 ```
 
 ### e)
+
 The differences-in-differences estimates are the same as in the previous parts. I think this is because we added some things that aren't time varying so then you can't control for time-related stuff with those.
 
 ## 6.
 
 ### a)
+
 I don't exactly understand why this question is different from the one in question 2 but in terms of the regression itself we need there to be no other state-specific events that only impact one of the states but not the other, which seems to be reasonable since the states are really close to each other and chain restaurants are generally supposed to be similar from location to location. Also, I think we need the same restaurants to be represented in both waves (like if one chain closes a lot of locations due to the change, then I don't think you can say that you're estimating the true effect of raising minimum wage).
 
 ### b)
+
 The time difference for the low wage group is given by $\hat{\beta_{2}} + \hat{\beta_{3}} = -0.004091 + 0.615872$. These wages increased. The time difference for the high wage group is given by $\hat{\beta_{2}} = -0.004091$, which we don't find to be significantly different from zero. The differences-in-differences estimate says that the starting wages increased more for the low wage restaurants than the high wage restaurants.
+
 ```{r}
 # get NJ data
 both_waves_NJ = both_waves |>
@@ -698,10 +755,13 @@ summary(model_NJ)
 ```
 
 ### c)
+
 For this regression we need the low-wage and high-wage NJ restaurants to follow the same wage setting trends in the absence of the minimum wage law. This is probably not realistic since low and high starting wages may reflect differences in the work tasks required in different restaurants or different locations (like cities with higher costs of living).
 
 ### d)
+
 The time difference for the low wage group is given by $\hat{\beta_{2}} + \hat{\beta_{3}} = -0.2652 + 0.3536$. These wages increased. The time difference for the high wage group is given by $\hat{\beta_{2}} = -0.2652$, which is actually significantly different from zero. Similarly to in NJ, the differences-in-differences estimate says that the starting wages increased more for the low wage restaurants than the high wage restaurants (but is lower than in NJ). This means there was probably a bit of wage adjustment in PA in response to the change in NJ because employers with low-wage employees in PA didn't want all their employees to move away for higher-paying jobs.
+
 ```{r}
 # get PA data in a kind of complicated way i think
 both_waves_PA = both_waves |>
