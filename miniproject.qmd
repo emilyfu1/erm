@@ -1,5 +1,5 @@
 ---
-title: "mini project milestone"
+title: 'mini project milestone'
 format: html
 editor: visual
 ---
@@ -10,9 +10,9 @@ The experiment design is a phase-in randomised control trial. All public school 
 
 Prior to the treatment, Alan and Ertac collected data on all students in the randomised samples through student, teacher, and parent surveys. To measure the effectiveness of the treatment, they used administrative data on behavioural conduct and experimental tasks that measured patience. Because the treatment was implemented in different ways by each teacher, Alan and Ertac use the offering of the program rather than the program itself as their treatment variable. These evaluations occurred once immediately after the treatment (Phase 1), once 8 months after the treatment (Phase 2), and then again around three years later (Phase 3). They found that treated students were more patient in the experimental tasks and their administrative records were less likely to indicate poor behaviour. They estimate heterogeneous treatment effects by gender and initial academic standing, finding that these results were persistent up to the second follow-up period after the treatment for girls and academically-stronger students.
 
-The replication materials of this paper include two Stata do-files and two Stata data files. One of the datasets and its corresponding do-file are used only to produce table 8 (phase 3 treatment effects) and the density plot in Figure 2 for phase 3 of the study in the paper. The other dataset contains the rest of the data. These four files are all you need to produce all figures aside from Table 2, for which only the required regressions are provided and not the code that creates the table itself. Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means.
+The replication materials of this paper include two Stata do-files and two Stata data files. One of the datasets and its corresponding do-file are used only to produce table 8 (phase 3 treatment effects) and the density plot in Figure 2 for phase 3 of the study in the paper. The other dataset contains the rest of the data. These four files are all you need to produce all figures aside from Table 2, for which only the required regressions are provided and not the code that creates the table itself. 
 
-Reproduce table 2: (the summary statistics in the paper)
+# data cleaning and data preparation stuff
 
 ```{r message=FALSE}
 library(tidyverse)
@@ -20,16 +20,222 @@ library(haven)
 library(estimatr)
 library(knitr)
 library(kableExtra)
+library(patchwork)
+library(broom)
 
 
 # location of data
 wd = '/Users/em/desktop/school/erm/replication/'
 
 # import data
-patiencedata = read_dta(paste0(wd, 'PatienceData.dta'))
+patiencedata = read_dta(paste0(wd, 'patiencedata.dta'))
 ```
 
-Getting the right data: The variables in the table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group.
+## functions
+```{r}
+# for heterogeneity analysis: extract estimated coefficient and CIs
+get_treatment_ci = function(model, group, school_type, treatment='allt') {
+  model_df = tidy(model, conf.int=TRUE)
+  values = model_df |>
+    filter(term == treatment) |>
+    mutate(group = group, 
+           school_type = school_type)}
+
+# for heterogeneity analysis: plot figures
+plot_group = function(data, group_name) {
+  
+  # Filter data for the specific group
+  plot_data = data |> 
+    filter(group == group_name)
+  
+  # Create the plot
+  ggplot(plot_data, aes(x = estimate, y = school_type, color = school_type)) +
+    # for that zero line
+    geom_vline(xintercept = 0) +
+    # for the estimated treatment effect
+    geom_point(size = 3, show.legend = FALSE) +
+    # for the CIs\
+    geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), 
+                   height = 0.2, linewidth = 1, show.legend = FALSE) +
+    labs(x='Treatment effect (with 95% CIs)',
+         y='School Type', 
+         title=group_name) +
+  theme_minimal() +
+  guides(fill='none')}
+```
+
+## creating some variables (creating dummies, destringing, etc)
+
+The authors use the variables `highw4` (a dummy variable indicating high socioeconomic standing) and `highs4` (a dummy variable indicating high academic standing), which do not exist in the data yet are not constructed or calculated in the existing Stata replication code. They do create the variables `highw4cat` and `highs4cat` as dummy variables indicating high wealth or high success, the latter having no label or description in the replication package. These variables treat observations with `NA` values in the original variables `success` or `wealth` as zeroes. These appear to be conceptually the closest to `highw4` and `highs4`. I guessed a construction of these two variables by preserving the `NA` values. However, I found that including `highw4cat` and/or `highs4cat` (or `highw4` and/or `highs4`) invariably made regression results stray away from those presented in the paper, despite `highw4` and `highs4` being included in the Stata code. I decided to remove these variables as covariates from all results tables and the heterogeneity analysis. Despite this issue, filtering observations by `highw4cat`, `highs4cat`, `highw4`, or `highs4` do not appear to impact the similarity of the results in the same way. Because I am therefore using slightly different specifications to the ones in the given replication code, estimated treatment effects and standard errors in this replication are not identical to those provided in the paper. However, they are usually very numerically close or preserve relative magnitudes compared to related specifications.
+
+```{r}
+patiencedataclean = patiencedata |>
+  
+  # convert to string since for some reason these are strings
+  mutate(cross1 = as.numeric(cross1),
+         cross2 =as.numeric(cross1)) |>
+  
+  # generate wealth dummies (these replace NAs with zeros)
+  mutate(highw4cat = ifelse(wealth >= 4, 1, 0),
+         loww4cat = ifelse(wealth < 3, 1, 0),
+         midw4cat = ifelse(wealth == 3, 1, 0)) |>
+  
+  # generate 'success' dummies (these replace NAs with zeros)
+  mutate(highs4cat = ifelse(success >= 4, 1, 0),
+         lows4cat = ifelse(success < 3, 1, 0),
+         mids4cat = ifelse(success == 3, 1, 0)) |>
+
+  # existing code doesn't explain highw4/highs4 very well but this is my guess
+  
+  # generate wealth dummies (with NAs)
+  mutate(highw4 = ifelse(is.na(wealth), NA, highw4cat)) |>
+  
+  # generate 'success' dummies (with NAs)
+  mutate(highs4 = ifelse(is.na(success), NA, highs4cat)) |>
+  
+  # good behaviour dummy with NAs
+  mutate(goodbeh = case_when(behaviour_score == 5 ~ 1,
+                             behaviour_score < 5 & !is.na(behaviour_score) ~ 0,
+                             TRUE ~ NA_real_)) |>
+  
+  # distraction dummy with NAs
+  mutate(easytodist = case_when(
+    tassess_distracted <= 2 & !is.na(tassess_distracted) ~ 1,
+    tassess_distracted > 2 & !is.na(tassess_distracted) ~ 0,
+    TRUE ~ NA_real_)) |>
+  
+  # replace missings with averages for some variables
+  mutate(ravenm = ifelse(is.na(raven), mean(raven, na.rm = TRUE), raven),
+         tagem = ifelse(is.na(tage), mean(tage, na.rm = TRUE), tage),
+         mrisk = ifelse(is.na(indrisk1), mean(indrisk1, na.rm = TRUE), 
+                        indrisk1)) |>
+  
+  # scaling the math score
+  mutate(sdmath = scale(math_score)) |>
+  
+  # follow-up outcomes
+  mutate(bspring = BehavioralAssesmentSpring13_1, # pick shorter variable name
+         sbadbeh3 = ifelse(bspring %in% c(1, 2), 1, 0)) |>
+  
+  # renaming time variables to use to generate outcome variable
+  rename(time1 = stime1,
+         time2 = stime2) |>
+  
+  # combine time variables
+  mutate(
+    avgtime = case_when(!is.na(time1) & !is.na(time2) ~ (time1 + time2)/2,
+                        !is.na(time1) & is.na(time2) ~ time1,
+                        is.na(time1) & !is.na(time2) ~ time2)) |>
+  
+  # combine time problems variables
+  mutate(timeprob = case_when(is.na(time1) & is.na(time2) ~ NA_real_, 
+                              mistime1 == 1 | mistime2 == 1 | 
+                                cross1 == 1 | cross2 == 1 ~ 1,
+                              TRUE ~ 0)) |>
+  
+  # convert convex preference variables to numeric
+  mutate(Convex1 = as.numeric(Convex1),
+         Convex2 = as.numeric(Convex2),
+         Convex3 = as.numeric(Convex3),
+         Convex4 = as.numeric(Convex4)) |>
+  
+  # CTB problems
+  mutate(ctbprob = case_when(Convex1 == 1 | 
+                               Convex2 == 1 | 
+                               Convex3 == 1 | 
+                               Convex4 == 1 ~ 1,
+                             TRUE ~ 0)) |>
+  
+  # time consistency dummies with appropriate NAs
+  mutate(expo = case_when(time1 == time2 & !is.na(time1) & !is.na(time2) ~ 1,
+                          !is.na(time1) & !is.na(time2) ~ 0,
+                          TRUE ~ NA_real_),
+         timerr = case_when(expo == 1 & !is.na(time1) & !is.na(time2) ~ 0,
+                            time1 > time2 & !is.na(time1) & !is.na(time2) ~ 1,
+                            time1 < time2 & !is.na(time1) & !is.na(time2) ~ -1,
+                            TRUE ~ NA_real_),
+         hypo = case_when(timerr == -1 ~ 1,
+                          !is.na(timerr) ~ 0,
+                          TRUE ~ NA_real_),
+         hyper = case_when(timerr == 1 ~ 1,
+                           !is.na(timerr) ~ 0,
+                           TRUE ~ NA_real_)) |>
+  
+  # average patience calculated from convex preference variables
+  mutate(
+    avgctb = ifelse(
+      !is.na(Convex1) & !is.na(Convex2) & !is.na(Convex3) & !is.na(Convex4),
+      (Convex1 + Convex2 + Convex3 + Convex4)/4, 
+      NA_real_),
+    avgctb1 = ifelse(
+      !is.na(Convex1) & !is.na(Convex3),
+      (Convex1 + Convex3)/2, 
+      NA_real_)) |>
+  
+  # more time consistency dummies with appropriate NAs 
+  # using other experimental task
+  mutate(ctbexpo = case_when(Convex1 == Convex2 & Convex3 == Convex4 & 
+                               !is.na(Convex1) & !is.na(Convex2) &
+                               !is.na(Convex3) & !is.na(Convex4) ~ 1,
+                             !is.na(Convex1) & !is.na(Convex2) &
+                               !is.na(Convex3) & !is.na(Convex4) ~ 0,
+                             TRUE ~ NA_real_),
+    ctbhyper = case_when(Convex1 > Convex2 & Convex3 > Convex4 & 
+                           !is.na(Convex1) & !is.na(Convex2) &
+                           !is.na(Convex3) & !is.na(Convex4) ~ 1,
+                         !is.na(Convex1) & !is.na(Convex2) &
+                           !is.na(Convex3) & !is.na(Convex4) ~ 0,
+                         TRUE ~ NA_real_),
+    ctbhypo = case_when(Convex1 < Convex2 & Convex3 < Convex4 & 
+                          !is.na(Convex1) & !is.na(Convex2) & 
+                          !is.na(Convex3) & !is.na(Convex4) ~ 1,
+                        !is.na(Convex1) & !is.na(Convex2) &
+                          !is.na(Convex3) & !is.na(Convex4) ~ 0,
+                        TRUE ~ NA_real_)) |>
+  
+  # rename convex preferences variables
+  rename(convex1 = Convex1,
+         convex2 = Convex2,
+         convex3 = Convex3,
+         convex4 = Convex4) |>
+  
+  # standardising risk attitude variables
+  mutate(stpostrisk = scale(individualrisk2),
+         stprerisk = scale(indrisk1)) |>
+  
+  # CTB allocation variables: rename and make numeric for easier use
+  mutate(otime1 = as.numeric(OO_ZAMAN_01),
+         otime2 = as.numeric(OO_ZAMAN_02),
+         otime3 = as.numeric(OO_ZAMAN_03),
+         otime4 = as.numeric(OO_ZAMAN_04),
+         # also check for NAs
+         otimevar = ifelse(!is.na(otime1) | !is.na(otime2) | 
+                             !is.na(otime3) | !is.na(otime4), 1, NA),
+         # also get averages
+         oavgctb = (otime1 + otime2 + otime3 + otime4)/4
+  )
+```
+
+## inverse probability weights
+```{r}
+# school attrition variable
+patiencedataclean = patiencedataclean |>
+  mutate(attrit = ifelse(is.na(otimevar), 1, 0))
+
+# get predicted attrition
+attrit_model = glm(attrit ~ male + mrisk + ravenm + highpat,
+                   data=patiencedataclean, 
+                   family=binomial(link='logit'))
+
+# to create weights
+patiencedataclean = patiencedataclean |>
+  mutate(prob1 = predict(attrit_model, type='response'),
+         ipw = 1/prob1)
+```
+
+# Reproduce Table 2: (the summary statistics in the paper)
+
+Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means. The variables in the summary statistics table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group.
 
 ```{r}
 table2_vars = c('male', 'behaviour_score', 'success', 
@@ -45,7 +251,7 @@ for (var in table2_vars) {
   # regress var on the two treatment dummies
   model = lm_robust(as.formula(paste(var, '~ tr16 + tr8')), 
                     se_type='stata',
-                    clusters = schoolid,
+                    clusters=schoolid,
                     data=patiencedata)
   
   # new row with estimates
@@ -61,20 +267,19 @@ for (var in table2_vars) {
   # create a dataframe to merge
   # this table is kind of hard to format because the coefficients are columns
   new_row_est_se = tibble(variable = var, 
-                          control_mean=sprintf("%.2f\n(%.2f)", # weird regex
+                          control_mean=sprintf('%.2f\n(%.2f)', # weird regex
                                                est_control_mean, 
                                                se_control_mean), 
-                          difference_IT=sprintf("%.2f\n(%.2f)", 
+                          difference_IT=sprintf('%.2f\n(%.2f)', 
                                                 est_difference_IT, 
                                                 se_difference_IT), 
-                          difference_CT=sprintf("%.2f\n(%.2f)", 
+                          difference_CT=sprintf('%.2f\n(%.2f)', 
                                                 est_difference_CT, 
                                                 se_difference_CT))
 
   # and attaching them
   table_2 = bind_rows(table_2, new_row_est_se) 
 }
-
 ```
 
 Table 2 printout (pretty print):
@@ -84,4 +289,366 @@ kbl(table_2) |>
   kable_styling() |>
   # i think this uses the newlines
   column_spec(column=1:ncol(table_2), extra_css='white-space: pre-wrap;')
+```
+
+# Reproduce Table 4: treatment effects on follow-up risk aversion
+
+```{r}
+# first run on all treated
+spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm + 
+                      highpat + exp_1 + exp_5 + exp_7 , 
+                    data = patiencedataclean,
+                    clusters=schoolid,
+                    se_type='stata')
+summary(spec1)
+
+# control mean for spec1
+spec1_controlmeans = patiencedataclean |> 
+  filter(allt == 0) |> 
+  summarise(mean(stpostrisk, na.rm=TRUE)) |> 
+  pull()
+
+# then do initially treated and later-treated separately
+spec2 = lm_robust(stpostrisk ~ tr16 + tr8 + male + mrisk + ravenm + 
+                          highpat + exp_1 + exp_5 + exp_7 , 
+                        data = patiencedataclean,
+                        clusters=schoolid,
+                        se_type='stata')
+summary(spec2)
+
+# control mean for spec2 (for tr16 = tr8 = 0)
+spec2_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(stpostrisk, na.rm=TRUE)) |> 
+  pull()
+```
+
+# Reproduce Table 5: treatment effect on experimental outcome MTB
+
+```{r}
+# first regress short term time difference
+spec3 = lm_robust(time1 ~ tr16 + male + mrisk + ravenm  +
+                            highpat + exp_1 + exp_2 + exp_8, 
+                          data = patiencedataclean |> filter(timeprob != 1),
+                          clusters=schoolid,
+                          se_type='stata')
+summary(spec3)
+
+# control mean for spec1
+spec3_controlmeans = patiencedataclean |> 
+  filter(allt == 0) |> 
+  summarise(mean(time1, na.rm=TRUE)) |> 
+  pull()
+
+# then do longer-term time difference
+spec4 = lm_robust(time2 ~ tr16 + male + mrisk + ravenm  +
+                            highpat + exp_1 + exp_2 + exp_8, 
+                          data = patiencedataclean |> filter(timeprob != 1),
+                          clusters=schoolid,
+                          se_type='stata')
+summary(spec4)
+
+# control mean for spec4 (for tr16 = tr8 = 0)
+spec4_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(time2, na.rm=TRUE)) |> 
+  pull()
+```
+
+# Reproduce Table 6
+
+```{r}
+# regress on decisions made between experiment and one week later
+
+spec5a = lm_robust(convex1 ~ allt + male + mrisk + ravenm + 
+                      highpat + exp_1 + exp_5 + exp_7 , 
+                    data = patiencedataclean,
+                    clusters=schoolid,
+                    se_type='stata')
+summary(spec5a)
+
+spec5b = lm_robust(convex1 ~ tr16 + tr8 + male + mrisk + ravenm + 
+                          highpat + exp_1 + exp_5 + exp_7 , 
+                        data = patiencedataclean,
+                        clusters=schoolid,
+                        se_type='stata')
+summary(spec5b)
+
+spec5c = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
+                      highpat + exp_1 + exp_5 + exp_7 , 
+                    data = patiencedataclean,
+                    clusters=schoolid,
+                    se_type='stata')
+summary(spec5c)
+
+spec5d = lm_robust(convex3 ~ tr16 + tr8 + male + mrisk + ravenm + 
+                          highpat + exp_1 + exp_5 + exp_7 , 
+                        data = patiencedataclean,
+                        clusters=schoolid,
+                        se_type='stata')
+summary(spec5d)
+```
+
+# Heterogeneity Analysis: Comparing persistence of treatment effects for different groups
+
+## Preference Reversal Types
+```{r}
+# elementary school exponential preferences
+spec11a = lm_robust(convex3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(expo == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    clusters=schoolid,
+                    se_type='stata')
+
+# elementary school hyperbolic preferences
+spec11b = lm_robust(convex3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(hyper == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    clusters=schoolid,
+                    se_type='stata')
+
+# elementary school hypobolic preferences
+spec11c = lm_robust(convex3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(hypo == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    clusters=schoolid,
+                    se_type='stata')
+
+# middle school exponential preferences
+spec22a = lm_robust(otime3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(expo == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    weights=ipw,
+                    clusters=schoolid,
+                    se_type='stata')
+
+# middle school hyperbolic preferences
+spec22b = lm_robust(otime3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(hyper == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    weights=ipw,
+                    clusters=schoolid,
+                    se_type='stata')
+
+# middle school hypobolic preferences
+spec22c = lm_robust(otime3 ~ tr8 + time1,
+                    data = patiencedataclean |> 
+                      filter(hypo == 1, timeprob != 1, 
+                             ctbprob != 1, tr16 == 0),
+                    weights=ipw,
+                    clusters=schoolid,
+                    se_type='stata')
+```
+
+Showing different persistence for preference reversal types
+```{r}
+# all treatment effects
+treatmenteffects_pref = bind_rows(
+  get_treatment_ci(model=spec11a, group='Exponential', 
+                   school_type='Elementary School', treatment='tr8'),
+  get_treatment_ci(model=spec22a, group='Exponential', 
+                   school_type='Middle School', treatment='tr8'),
+  get_treatment_ci(model=spec11b, group='Hyperbolic', 
+                   school_type='Elementary School', treatment='tr8'),
+  get_treatment_ci(model=spec22b, group='Hyperbolic', 
+                   school_type='Middle School', treatment='tr8'),
+  get_treatment_ci(model=spec11c, group='Hypobolic', 
+                   school_type='Elementary School', treatment='tr8'),
+  get_treatment_ci(model=spec22c, group='Hypobolic', 
+                   school_type='Middle School', treatment='tr8'))
+
+# Create individual plots
+exp_plot = plot_group(data=treatmenteffects_pref, group_name='Exponential')
+
+hyp_plot = plot_group(data=treatmenteffects_pref, group_name='Hyperbolic')
+
+hypo_plot = plot_group(data=treatmenteffects_pref, group_name='Hypobolic')
+
+# display 3 plots but don't make it too weird
+
+(exp_plot | hyp_plot) / (hypo_plot | plot_spacer())
+
+```
+
+## Heterogeneity by academic standing
+```{r}
+# elementary school, high academic standing
+spec1a_educ = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
+                     highpat + exp_1 + exp_5 + exp_7 ,
+                   data = patiencedataclean |> 
+                     filter(highs4 == 1, ctbprob != 1),
+                   clusters=schoolid,
+                   se_type='stata')
+
+# elementary school, low academic standing
+spec1b_educ = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
+                     highpat + exp_1 + exp_5 + exp_7 ,
+                   data = patiencedataclean |> 
+                     filter(highs4 == 0, ctbprob != 1),
+                   clusters=schoolid,
+                   se_type='stata')
+
+# middle school (with IPW weights), high academic standing
+spec2a_educ = lm_robust(otime3 ~ allt + male + mrisk + ravenm + 
+                     highpat + exp_1 + exp_5 + exp_7 ,
+                   data = patiencedataclean |> 
+                     filter(highs4 == 1, ctbprob != 1),
+                   weights=ipw,
+                   clusters=schoolid,
+                   se_type='stata')
+
+# middle school (with IPW weights), low academic standing
+spec2b_educ = lm_robust(otime3 ~ allt + male + mrisk + ravenm + 
+                     highpat + exp_1 + exp_5 + exp_7,
+                   data = patiencedataclean |> 
+                     filter(highs4 == 0, ctbprob != 1),
+                   weights=ipw,
+                   clusters=schoolid,
+                   se_type='stata')
+```
+
+Showing different persistence:
+```{r}
+# all treatment effects
+treatmenteffects_educ = bind_rows(
+  get_treatment_ci(model=spec1a_educ, group='High Academic Standing', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec1b_educ, group='Low Academic Standing', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec2a_educ, group='High Academic Standing', 
+                   school_type='Middle School'),
+  get_treatment_ci(model=spec2b_educ, group='Low Academic Standing', 
+                   school_type='Middle School'))
+
+# high academic standing
+high_educ_plot = plot_group(data=treatmenteffects_educ, 
+                           group_name='High Academic Standing')
+
+# low academic standing
+low_educ_plot = plot_group(data=treatmenteffects_educ, 
+                          group_name='Low Academic Standing')
+
+high_educ_plot + low_educ_plot
+```
+
+## Heterogeneity by gender
+```{r}
+# these don't include male as a covariate because we're doing male = 0 and 1
+# separately
+
+# elementary school
+spec1a_gender = lm_robust(convex3 ~ allt + mrisk + ravenm + 
+                            highpat + exp_1 + exp_5 + exp_7,
+                          data = patiencedataclean |> 
+                            filter(male == 1, ctbprob != 1),
+                          clusters=schoolid,
+                          se_type='stata')
+
+spec1b_gender = lm_robust(convex3 ~ allt + mrisk + ravenm + 
+                            highpat + exp_1 + exp_5 + exp_7,
+                          data = patiencedataclean |> 
+                            filter(male == 0, ctbprob != 1),
+                          clusters=schoolid,
+                          se_type='stata')
+
+# middle school (with IPW weights)
+spec2a_gender = lm_robust(otime3 ~ allt + mrisk + ravenm + 
+                            highpat + exp_1 + exp_5 + exp_7,
+                          data = patiencedataclean |> 
+                            filter(male == 1, ctbprob != 1),
+                          weights=ipw,
+                          clusters=schoolid,
+                          se_type='stata')
+
+spec2b_gender = lm_robust(otime3 ~ allt + mrisk + ravenm + 
+                            highpat + exp_1 + exp_5 + exp_7,
+                          data = patiencedataclean |> 
+                            filter(male == 0, ctbprob != 1),
+                          weights=ipw,
+                          clusters=schoolid,
+                          se_type='stata')
+```
+
+Showing different persistence:
+```{r}
+# all treatment effects
+treatmenteffects_gender = bind_rows(
+  get_treatment_ci(model=spec1a_gender, group='Boys', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec1b_gender, group='Girls', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec2a_gender, group='Boys', 
+                   school_type='Middle School'),
+  get_treatment_ci(model=spec2b_gender, group='Girls', 
+                   school_type='Middle School'))
+
+# boys plot
+boys_plot = plot_group(data=treatmenteffects_gender, group_name='Boys')
+
+# Create plot for Girls
+girls_plot = plot_group(data=treatmenteffects_gender, group_name='Girls')
+
+boys_plot + girls_plot
+```
+
+## Heterogeneity by socioeconomic standing
+```{r}
+# elementary school
+spec1a_ses = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
+                         highpat + exp_1 + exp_5 + exp_7,
+                       data = patiencedataclean |> 
+                         filter(highw4 == 1, ctbprob != 1),
+                       clusters=schoolid,
+                       se_type='stata')
+
+spec1b_ses = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
+                         highpat + exp_1 + exp_5 + exp_7,
+                       data = patiencedataclean |> 
+                         filter(highw4 == 0, ctbprob != 1),
+                       clusters=schoolid,
+                       se_type='stata')
+
+# middle school (with IPW weights)
+spec2a_ses = lm_robust(otime3 ~ allt + male + mrisk + ravenm + 
+                         highpat + exp_1 + exp_5 + exp_7,
+                       data = patiencedataclean |> 
+                         filter(highw4 == 1, ctbprob != 1),
+                       weights=ipw,
+                       clusters=schoolid,
+                       se_type='stata')
+
+spec2b_ses = lm_robust(otime3 ~ allt + male + mrisk + ravenm + 
+                         highpat + exp_1 + exp_5 + exp_7,
+                       data = patiencedataclean |> 
+                         filter(highw4 == 0, ctbprob != 1),
+                       weights=ipw,
+                       clusters=schoolid,
+                       se_type='stata')
+```
+
+Showing different persistence:
+```{r}
+# all treatment effects
+treatmenteffects_ses = bind_rows(
+  get_treatment_ci(model=spec1a_ses, group='High SES', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec1b_ses, group='Low SES', 
+                   school_type='Elementary School'),
+  get_treatment_ci(model=spec2a_ses, group='High SES', 
+                   school_type='Middle School'),
+  get_treatment_ci(model=spec2b_ses, group='Low SES', 
+                   school_type='Middle School'))
+
+# high SES
+high_ses_plot = plot_group(data=treatmenteffects_ses, group_name='High SES')
+
+# low SES
+low_ses_plot = plot_group(data=treatmenteffects_ses, group_name='Low SES')
+
+high_ses_plot + low_ses_plot
 ```
