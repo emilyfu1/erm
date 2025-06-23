@@ -22,7 +22,7 @@ library(knitr)
 library(kableExtra)
 library(patchwork)
 library(broom)
-
+library(modelsummary)
 
 # location of data
 wd = '/Users/em/desktop/school/erm/replication/'
@@ -238,61 +238,43 @@ patiencedataclean = patiencedataclean |>
 Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means. The variables in the summary statistics table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group.
 
 ```{r}
-table2_vars = c('male', 'behaviour_score', 'success', 
-                'wealth', 'raven' ,'indrisk1', 'math_score', 'tmale', 'tage')
+table2_vars = c('male', 'behaviour_score', 'success', 'wealth', 'raven',
+                'indrisk1', 'math_score', 'tmale', 'tage')
 
-table_2 = tibble(variable = character(), 
-                 control_mean = character(), 
-                 difference_IT = character(), 
-                 difference_CT = character())
+# this is me giving up on making the table exactly like the paper
+# the code i had before is so cumbersome
+# i'd rather have clean code and a table that provides the same estimates
 
-# regress on dummies
+# store all the estimates and differences in this
+table_2 = tibble()
+
+# run regression for each variable listed
 for (var in table2_vars) {
-  # regress var on the two treatment dummies
-  model = lm_robust(as.formula(paste(var, '~ tr16 + tr8')), 
-                    se_type='stata',
-                    clusters=schoolid,
-                    data=patiencedata)
-  
-  # new row with estimates
-  est_control_mean = coef(model)['(Intercept)']
-  est_difference_IT = coef(model)['tr16']
-  est_difference_CT = coef(model)['tr16']
-  
-  # new row with standard errors
-  se_control_mean = sqrt(diag(vcov(model))['(Intercept)'])
-  se_difference_IT = sqrt(diag(vcov(model))['tr16'])
-  se_difference_CT = sqrt(diag(vcov(model))['tr8'])
-  
-  # create a dataframe to merge
-  # this table is kind of hard to format because the coefficients are columns
-  new_row_est_se = tibble(variable = var, 
-                          control_mean=sprintf('%.2f\n(%.2f)', # weird regex
-                                               est_control_mean, 
-                                               se_control_mean), 
-                          difference_IT=sprintf('%.2f\n(%.2f)', 
-                                                est_difference_IT, 
-                                                se_difference_IT), 
-                          difference_CT=sprintf('%.2f\n(%.2f)', 
-                                                est_difference_CT, 
-                                                se_difference_CT))
+  model = lm_robust(as.formula(paste(var, '~ tr16 + tr8')),
+                     data=patiencedata,
+                     se_type='stata',
+                     clusters=schoolid)
 
-  # and attaching them
-  table_2 = bind_rows(table_2, new_row_est_se) 
-}
-```
+  # get estimates
+  ests = coef(model)
+  ses = sqrt(diag(vcov(model)))
 
-Table 2 printout (pretty print):
+  # this creates a row with all the information
+  row = tibble(variable=var,
+               control_mean=ests['(Intercept)'],
+               se_control_mean=ses['(Intercept)'],
+               diff_IT=ests['tr16'],
+               se_diff_IT=ses['tr16'],
+               diff_CT=ests['tr8'],
+               se_diff_CT=ses['tr8'])
+  
+  # append to results
+  table_2 = bind_rows(table_2, row)}
 
-```{r}
-kbl(table_2) |>
-  kable_styling() |>
-  # i think this uses the newlines
-  column_spec(column=1:ncol(table_2), extra_css='white-space: pre-wrap;')
+print(table_2)
 ```
 
 # Reproduce Table 4: treatment effects on follow-up risk aversion
-
 ```{r}
 # first run on all treated
 spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm + 
@@ -300,10 +282,9 @@ spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm +
                     data = patiencedataclean,
                     clusters=schoolid,
                     se_type='stata')
-summary(spec1)
 
 # control mean for spec1
-spec1_controlmeans = patiencedataclean |> 
+spec1_controlmean = patiencedataclean |> 
   filter(allt == 0) |> 
   summarise(mean(stpostrisk, na.rm=TRUE)) |> 
   pull()
@@ -314,17 +295,40 @@ spec2 = lm_robust(stpostrisk ~ tr16 + tr8 + male + mrisk + ravenm +
                         data = patiencedataclean,
                         clusters=schoolid,
                         se_type='stata')
-summary(spec2)
 
 # control mean for spec2 (for tr16 = tr8 = 0)
-spec2_controlmeans = patiencedataclean |> 
+spec2_controlmean = patiencedataclean |> 
   filter(tr16 == 0, tr8 == 0) |> 
   summarise(mean(stpostrisk, na.rm=TRUE)) |> 
   pull()
 ```
 
-# Reproduce Table 5: treatment effect on experimental outcome MTB
+Produce the table:
+```{r}
+# specifications to put into modelsummary with columns
+model_list_table4 = list('(1)' = spec1,
+                  '(2)' = spec2)
 
+# need the control means to match the table in the paper
+controlmean_table4 = tibble(term = c('Control Mean'),
+                     `(1)` = c(sprintf('%.2f', spec1_controlmean)),
+                     `(2)` = c(sprintf('%.2f', spec2_controlmean)))
+
+# generate the table
+modelsummary(model_list_table4,
+             # only add these coefficients
+             coef_map = c('allt' = 'Treatment IT + CT',
+                          'tr16' = 'Treatment IT',
+                          'tr8' = 'Treatment CT'),
+             estimate = '{estimate}',
+             statistic = '({std.error})', # standard errors in brackets
+             stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+             gof_omit = 'R2|Adj|Std.Errors', # removes unneccesary stuff
+             add_rows = controlmean_table4, # add the custom row
+             output = 'markdown')
+```
+
+# Reproduce Table 5: treatment effect on experimental outcome MTB
 ```{r}
 # first regress short term time difference
 spec3 = lm_robust(time1 ~ tr16 + male + mrisk + ravenm  +
@@ -332,13 +336,20 @@ spec3 = lm_robust(time1 ~ tr16 + male + mrisk + ravenm  +
                           data = patiencedataclean |> filter(timeprob != 1),
                           clusters=schoolid,
                           se_type='stata')
-summary(spec3)
 
-# control mean for spec1
+# control mean for spec3
 spec3_controlmeans = patiencedataclean |> 
   filter(allt == 0) |> 
   summarise(mean(time1, na.rm=TRUE)) |> 
   pull()
+
+# standard deviation scaled treatment effect for spec3
+spec3_sd_control = patiencedataclean |>
+  filter(tr16 == 0, timeprob != 1) |> 
+  summarise(sd = sd(time1, na.rm=TRUE)) |> 
+  pull()
+# get the estimated coefficient and divide by standard deviation of the outcome
+spec3_sd_effect = coef(spec3)['tr16'] / spec3_sd_control
 
 # then do longer-term time difference
 spec4 = lm_robust(time2 ~ tr16 + male + mrisk + ravenm  +
@@ -346,13 +357,47 @@ spec4 = lm_robust(time2 ~ tr16 + male + mrisk + ravenm  +
                           data = patiencedataclean |> filter(timeprob != 1),
                           clusters=schoolid,
                           se_type='stata')
-summary(spec4)
+
 
 # control mean for spec4 (for tr16 = tr8 = 0)
 spec4_controlmeans = patiencedataclean |> 
   filter(tr16 == 0, tr8 == 0) |> 
   summarise(mean(time2, na.rm=TRUE)) |> 
   pull()
+
+# standard deviation scaled treatment effect for spec4
+spec4_sd_control = patiencedataclean |>
+  filter(tr16 == 0, timeprob != 1) |> 
+  summarise(sd = sd(time2, na.rm=TRUE)) |> 
+  pull()
+# get the estimated coefficient and divide by standard deviation of the outcome
+spec4_sd_effect = coef(spec4)['tr16'] / spec4_sd_control
+```
+
+Produce the table:
+```{r}
+# specifications to put into modelsummary with columns
+model_list_table5 = list('Early Choices: Today vs. 1 Week' = spec3,
+                  'Early Choices: 1 Week vs. 2 Weeks' = spec4)
+
+# need the control means to match the table in the paper
+controlmean_table5 = tibble(
+  term = c('Control Mean', 'Standard Deviation Effect'),
+  `Early Choices: Today vs. 1 Week` = c(sprintf('%.2f', spec3_controlmeans),
+                                       sprintf('%.2f', spec3_sd_effect)),
+  `Early Choices: 1 Week vs. 2 Weeks` = c(sprintf('%.2f', spec4_controlmeans),
+                                         sprintf('%.2f', spec4_sd_effect)))
+
+# generate the table
+modelsummary(model_list_table5,
+             # only add these coefficients
+             coef_map = c('tr16' = 'Treatment IT'),
+             estimate = '{estimate}',
+             statistic = '({std.error})', # standard errors in brackets
+             stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+             gof_omit = 'R2|Adj|Std.Errors', # removes unneccesary stuff
+             add_rows = controlmean_table5, # add the custom row
+             output = 'markdown')
 ```
 
 # Reproduce Table 6
