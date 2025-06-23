@@ -278,10 +278,10 @@ print(table_2)
 ```{r}
 # first run on all treated
 spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm + 
-                      highpat + exp_1 + exp_5 + exp_7 , 
-                    data = patiencedataclean,
-                    clusters=schoolid,
-                    se_type='stata')
+                    highpat + exp_1 + exp_5 + exp_7 , 
+                  data = patiencedataclean,
+                  clusters=schoolid,
+                  se_type='stata')
 
 # control mean for spec1
 spec1_controlmean = patiencedataclean |> 
@@ -291,10 +291,10 @@ spec1_controlmean = patiencedataclean |>
 
 # then do initially treated and later-treated separately
 spec2 = lm_robust(stpostrisk ~ tr16 + tr8 + male + mrisk + ravenm + 
-                          highpat + exp_1 + exp_5 + exp_7 , 
-                        data = patiencedataclean,
-                        clusters=schoolid,
-                        se_type='stata')
+                    highpat + exp_1 + exp_5 + exp_7 , 
+                  data = patiencedataclean,
+                  clusters=schoolid,
+                  se_type='stata')
 
 # control mean for spec2 (for tr16 = tr8 = 0)
 spec2_controlmean = patiencedataclean |> 
@@ -307,25 +307,25 @@ Produce the table:
 ```{r}
 # specifications to put into modelsummary with columns
 model_list_table4 = list('(1)' = spec1,
-                  '(2)' = spec2)
+                         '(2)' = spec2)
 
 # need the control means to match the table in the paper
 controlmean_table4 = tibble(term = c('Control Mean'),
-                     `(1)` = c(sprintf('%.2f', spec1_controlmean)),
-                     `(2)` = c(sprintf('%.2f', spec2_controlmean)))
+                            `(1)` = c(sprintf('%.2f', spec1_controlmean)),
+                            `(2)` = c(sprintf('%.2f', spec2_controlmean)))
 
 # generate the table
 modelsummary(model_list_table4,
              # only add these coefficients
-             coef_map = c('allt' = 'Treatment IT + CT',
+             coef_map=c('allt' = 'Treatment IT + CT',
                           'tr16' = 'Treatment IT',
                           'tr8' = 'Treatment CT'),
-             estimate = '{estimate}',
-             statistic = '({std.error})', # standard errors in brackets
-             stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
-             gof_omit = 'R2|Adj|Std.Errors', # removes unneccesary stuff
-             add_rows = controlmean_table4, # add the custom row
-             output = 'markdown')
+             estimate='{estimate}',
+             statistic='({std.error})', # standard errors in brackets
+             stars=c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+             gof_omit='R2|Adj|Std.Errors', # removes unneccesary stuff
+             add_rows=controlmean_table4, # add the custom row
+             output='markdown')
 ```
 
 # Reproduce Table 5: treatment effect on experimental outcome MTB
@@ -333,9 +333,9 @@ modelsummary(model_list_table4,
 # first regress short term time difference
 spec3 = lm_robust(time1 ~ tr16 + male + mrisk + ravenm  +
                             highpat + exp_1 + exp_2 + exp_8, 
-                          data = patiencedataclean |> filter(timeprob != 1),
-                          clusters=schoolid,
-                          se_type='stata')
+                  data = patiencedataclean |> filter(timeprob != 1),
+                  clusters=schoolid,
+                  se_type='stata')
 
 # control mean for spec3
 spec3_controlmeans = patiencedataclean |> 
@@ -349,14 +349,14 @@ spec3_sd_control = patiencedataclean |>
   summarise(sd = sd(time1, na.rm=TRUE)) |> 
   pull()
 # get the estimated coefficient and divide by standard deviation of the outcome
-spec3_sd_effect = coef(spec3)['tr16'] / spec3_sd_control
+spec3_sd_effect = abs(coef(spec3)['tr16'] / spec3_sd_control)
 
 # then do longer-term time difference
 spec4 = lm_robust(time2 ~ tr16 + male + mrisk + ravenm  +
-                            highpat + exp_1 + exp_2 + exp_8, 
-                          data = patiencedataclean |> filter(timeprob != 1),
-                          clusters=schoolid,
-                          se_type='stata')
+                    highpat + exp_1 + exp_2 + exp_8, 
+                  data = patiencedataclean |> filter(timeprob != 1),
+                  clusters=schoolid,
+                  se_type='stata')
 
 
 # control mean for spec4 (for tr16 = tr8 = 0)
@@ -371,37 +371,37 @@ spec4_sd_control = patiencedataclean |>
   summarise(sd = sd(time2, na.rm=TRUE)) |> 
   pull()
 # get the estimated coefficient and divide by standard deviation of the outcome
-spec4_sd_effect = coef(spec4)['tr16'] / spec4_sd_control
+# idk exactly why they have this but it looks like a scaled absolute value
+spec4_sd_effect = abs(coef(spec4)['tr16'] / spec4_sd_control)
 ```
 
 Produce the table:
 ```{r}
 # specifications to put into modelsummary with columns
-model_list_table5 = list('Early Choices: Today vs. 1 Week' = spec3,
-                  'Early Choices: 1 Week vs. 2 Weeks' = spec4)
+model_list_table5 = list('(1)' = spec3,
+                         '(2)' = spec4)
 
 # need the control means to match the table in the paper
-controlmean_table5 = tibble(
+extras_table5 = tibble(
   term = c('Control Mean', 'Standard Deviation Effect'),
-  `Early Choices: Today vs. 1 Week` = c(sprintf('%.2f', spec3_controlmeans),
-                                       sprintf('%.2f', spec3_sd_effect)),
-  `Early Choices: 1 Week vs. 2 Weeks` = c(sprintf('%.2f', spec4_controlmeans),
-                                         sprintf('%.2f', spec4_sd_effect)))
+  `(1)` = c(sprintf('%.2f', spec3_controlmeans),
+            sprintf('%.2f', spec3_sd_effect)),
+  `(2)` = c(sprintf('%.2f', spec4_controlmeans),
+            sprintf('%.2f', spec4_sd_effect)))
 
 # generate the table
 modelsummary(model_list_table5,
              # only add these coefficients
-             coef_map = c('tr16' = 'Treatment IT'),
-             estimate = '{estimate}',
-             statistic = '({std.error})', # standard errors in brackets
-             stars = c('*' = 0.1, '**' = 0.05, '***' = 0.01),
-             gof_omit = 'R2|Adj|Std.Errors', # removes unneccesary stuff
-             add_rows = controlmean_table5, # add the custom row
-             output = 'markdown')
+             coef_map=c('tr16' = 'Treatment IT'),
+             estimate='{estimate}',
+             statistic='({std.error})', # standard errors in brackets
+             stars=c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+             gof_omit='R2|Adj|Std.Errors', # removes unneccesary stuff
+             add_rows=extras_table5, # add the custom rows
+             output='markdown')
 ```
 
 # Reproduce Table 6
-
 ```{r}
 # regress on decisions made between experiment and one week later
 
@@ -410,28 +410,118 @@ spec5a = lm_robust(convex1 ~ allt + male + mrisk + ravenm +
                     data = patiencedataclean,
                     clusters=schoolid,
                     se_type='stata')
-summary(spec5a)
 
 spec5b = lm_robust(convex1 ~ tr16 + tr8 + male + mrisk + ravenm + 
                           highpat + exp_1 + exp_5 + exp_7 , 
                         data = patiencedataclean,
                         clusters=schoolid,
                         se_type='stata')
-summary(spec5b)
 
 spec5c = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
                       highpat + exp_1 + exp_5 + exp_7 , 
                     data = patiencedataclean,
                     clusters=schoolid,
                     se_type='stata')
-summary(spec5c)
 
 spec5d = lm_robust(convex3 ~ tr16 + tr8 + male + mrisk + ravenm + 
                           highpat + exp_1 + exp_5 + exp_7 , 
                         data = patiencedataclean,
                         clusters=schoolid,
                         se_type='stata')
-summary(spec5d)
+
+# control means:
+
+spec5a_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(convex1, na.rm=TRUE)) |> 
+  pull()
+
+spec5b_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(convex1, na.rm=TRUE)) |> 
+  pull()
+
+spec5c_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(convex3, na.rm=TRUE)) |> 
+  pull()
+
+spec5d_controlmeans = patiencedataclean |> 
+  filter(tr16 == 0, tr8 == 0) |> 
+  summarise(mean(convex3, na.rm=TRUE)) |> 
+  pull()
+
+# get all the standard deviation scaled treatment effects:
+
+# get all the estimated coefficients from the regressions with allt
+bhat_allt_convex1 = coef(spec5a)['allt']
+bhat_allt_convex3 = coef(spec5c)['allt']
+
+# get all the estimated coefficients from the regressions with both tr16 and tr8
+bhat_tr16_convex1 = coef(spec5b)['tr16']
+bhat_tr8_convex1  = coef(spec5b)['tr8']
+bhat_tr16_convex3 = coef(spec5d)['tr16']
+bhat_tr8_convex3  = coef(spec5d)['tr8']
+
+# get standard deviations of the outcome variables
+sd_convex1 = sd(patiencedataclean$convex1, na.rm=TRUE)
+sd_convex3 = sd(patiencedataclean$convex3, na.rm=TRUE)
+
+# this time there are a bunch of these for the IT and CT groups
+
+sd_allt_convex1 = abs(bhat_allt_convex1 / sd_convex1)
+sd_allt_convex3 = abs(bhat_allt_convex3 / sd_convex3)
+
+sd_tr16_convex1 = abs(bhat_tr16_convex1 / sd_convex1)
+sd_tr8_convex1  = abs(bhat_tr8_convex1  / sd_convex1)
+
+sd_tr16_convex3 = abs(bhat_tr16_convex3 / sd_convex3)
+sd_tr8_convex3  = abs(bhat_tr8_convex3  / sd_convex3)
+```
+
+Produce the table:
+```{r}
+# specifications to put into modelsummary with columns
+model_list_table6 = list('(1)' = spec5a,
+                         '(2)' = spec5b,
+                         '(3)' = spec5c,
+                         '(4)' = spec5d)
+
+# need the way the scaled effects display to match the table in the paper
+extras_table6 = tibble(term = c('Control Mean', 
+                                'St. Deviation Effect (IT + CT)', 
+                                'St. Deviation Effect (IT)', 
+                                'St. Deviation Effect (CT)'),
+  `(1)` = c(sprintf('%.2f', spec5a_controlmeans),
+            sprintf('%.2f', sd_allt_convex1),
+            '', # force them to be empty 
+            ''), # because this specification only has allt
+  `(2)` = c(sprintf('%.2f', spec5b_controlmeans),
+            '', # this specification doesn't have allt
+            sprintf('%.2f', sd_tr16_convex1),
+            sprintf('%.2f', sd_tr8_convex1)),
+  `(3)` = c(sprintf('%.2f', spec5c_controlmeans),
+            sprintf('%.2f', sd_allt_convex3),
+            '', 
+            ''),
+  `(4)` = c(sprintf('%.2f', spec5d_controlmeans),
+            '', 
+            sprintf('%.2f', sd_tr16_convex3),
+            sprintf('%.2f', sd_tr8_convex3)))
+
+# generate the table
+modelsummary(model_list_table6,
+             # only add these coefficients
+             coef_map=c('allt' = 'Treatment IT + CT',
+                        'tr16' = 'Treatment IT',
+                        'tr8'  = 'Treatment CT'),
+             estimate='{estimate}',
+             statistic='({std.error})', # standard errors in brackets
+             stars=c('*' = 0.1, '**' = 0.05, '***' = 0.01),
+             gof_omit='R2|Adj|Std.Errors', # removes unneccesary stuff
+             add_rows=extras_table6, # add the custom rows
+             output='markdown')
+
 ```
 
 # Heterogeneity Analysis: Comparing persistence of treatment effects for different groups
