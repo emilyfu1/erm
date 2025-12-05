@@ -6,26 +6,26 @@ editor: visual
 
 In this paper, Alan and Ertac are interested in the correlation between non-cognitive skills and economic outcomes. Existing literature in economics and psychology find that childhood and adolescence are important periods in the development of non-cognitive skills. In particular, patience and self-control displayed in childhood are positively associated with health, labour market, social, and educational outcomes into adulthood. Childhood is an important period to develop these non-cognitive skills. While existing literature focuses on the factors contributing to these characteristics and how these characteristics impact adulthood outcomes, Alan and Ertac contribute to these findings by looking at whether these skills can be effectively taught in childhood through interventions and subsequently influence future behaviour. They note that the early childhood interventions literature finds various favourable impacts of cognitive skills interventions in childhood primarily through the development of noncognitive skills. These results provide the first randomised control study targeting intertemporal decision-making in young children that considers temporal impacts and impacts on real-life and experimental outcomes. They believe that their results can address education policy concerns about widening academic achievement gaps by providing a more easily-implementable and cost-effective complement to existing efforts to improve teaching quality.
 
-The authors focus on an educational programme that aims to improve a child's forward-looking attitudes and ability to defer consumption in intertemporal decision-making. They implemented this program in Istanbul public schools and were able to reach students with a large variation in socioeconomic status (SES), despite public schools in Turkey primarily enrolling students of lower socioeconomic background. By targeting forward-looking behaviour, Alan and Ertac propose that children can improve their foresight, make the future seem less remote, and therefore better judge the benefits of the future. They allow for a child's discount factor endowment to be an increasing concave function of various background characteristics and parental involvement. This discount factor can then change over time through the impact of educational investment as a substitute for or a complement of parental involvement, which induces children to exert effort to behave more patiently. Alan and Ertac also propose that the educational programme may change risk attitudes or induce signalling behaviour due to the display of patience as a valued trait. Children may act patiently to signal a particular image that they want to portray of themselves, which may result in habit formation. 
+The authors focus on an educational programme that aims to improve a child's forward-looking attitudes and ability to defer consumption in intertemporal decision-making. They implemented this program in Istanbul public schools and were able to reach students with a large variation in socioeconomic status (SES), despite public schools in Turkey primarily enrolling students of lower socioeconomic background. By targeting forward-looking behaviour, Alan and Ertac propose that children can improve their foresight, make the future seem less remote, and therefore better judge the benefits of the future. They allow for a child's discount factor endowment to be an increasing concave function of various background characteristics and parental involvement. This discount factor can then change over time through the impact of educational investment as a substitute for or a complement of parental involvement, which induces children to exert effort to behave more patiently. Alan and Ertac also propose that the educational programme may change risk attitudes or induce signalling behaviour due to the display of patience as a valued trait. Children may act patiently to signal a particular image that they want to portray of themselves, which may result in habit formation.
 
-They seek to identify the causal impact of this program on children's intertemporal choices by collaborating with educators to design educational games and stories for children. The experiment design is a phase-in randomised control trial. All public school third-grade teachers in Istanbul were contacted about the study. Schools in which there was at least one teacher willing to participate were randomly assigned the educational intervention in three groups, with randomisation occurring at the school level to avoid spillover effects across classrooms. Teachers attended training seminars prior to the implementation of the programme, which were provided by education consultants. All materials required for the programme were provided, and the teaching occurred during periods reserved for similar specialised teaching so that regular class instruction was not interrupted. Subgroups of schools implement the programme for students in two different time periods. 
+They seek to identify the causal impact of this program on children's intertemporal choices by collaborating with educators to design educational games and stories for children. The experiment design is a phase-in randomised control trial. All public school third-grade teachers in Istanbul were contacted about the study. Schools in which there was at least one teacher willing to participate were randomly assigned the educational intervention in three groups, with randomisation occurring at the school level to avoid spillover effects across classrooms. Teachers attended training seminars prior to the implementation of the programme, which were provided by education consultants. All materials required for the programme were provided, and the teaching occurred during periods reserved for similar specialised teaching so that regular class instruction was not interrupted. Subgroups of schools implement the programme for students in two different time periods.
 
-The initially-treated (IT) schools implemented the training across Spring 2013, the control-then-treatment (CT) group implemented the training in Fall 2013, and the pure control group (PC) never implements the training. The intervention was delivered by class teachers and focused on small case studies that helped students visualise intertemporal consumption and savings decisions using age-appropriate examples aiming to teach patience to the treated classes. They identify the average treatment effect on the treated because of the randomisation occurring among willingly-participating teachers (at the school level), but use the reasons given by teachers for opting out of the study to argue that the teachers opting in do not systematically differ from those opting out. Random assignment was performed on all schools with a teacher who indicated willingness to participate so that teachers assigned to the initial treatment group could participate in the training seminars. There were 15 treated schools in the IT group, 10 in the CT group, and 12 in the PC group. 
+The initially-treated (IT) schools implemented the training across Spring 2013, the control-then-treatment (CT) group implemented the training in Fall 2013, and the pure control group (PC) never implements the training. The intervention was delivered by class teachers and focused on small case studies that helped students visualise intertemporal consumption and savings decisions using age-appropriate examples aiming to teach patience to the treated classes. They identify the average treatment effect on the treated because of the randomisation occurring among willingly-participating teachers (at the school level), but use the reasons given by teachers for opting out of the study to argue that the teachers opting in do not systematically differ from those opting out. Random assignment was performed on all schools with a teacher who indicated willingness to participate so that teachers assigned to the initial treatment group could participate in the training seminars. There were 15 treated schools in the IT group, 10 in the CT group, and 12 in the PC group.
 
-Prior to the treatment, Alan and Ertac collected data on all students in the randomised samples through student, teacher, and parent surveys. To measure the effectiveness of the treatment, they used administrative data on behavioural conduct and experimental tasks that measured patience. Because the treatment was implemented in different ways by each teacher, Alan and Ertac use the offering of the program rather than the program itself as their treatment variable. This issue is likely hard to change as there will always be classroom-specific effects, if not teacher-specific effects, that impact how the programming is adopted for each student. These evaluations occurred at various times after the completion of the program to study temporal treatment effects. The last follow-up measurement takes place almost three years after the completion of the programme, once the studied children move from primary to middle school. 
+Prior to the treatment, Alan and Ertac collected data on all students in the randomised samples through student, teacher, and parent surveys. To measure the effectiveness of the treatment, they used administrative data on behavioural conduct and experimental tasks that measured patience. Because the treatment was implemented in different ways by each teacher, Alan and Ertac use the offering of the program rather than the program itself as their treatment variable. This issue is likely hard to change as there will always be classroom-specific effects, if not teacher-specific effects, that impact how the programming is adopted for each student. These evaluations occurred at various times after the completion of the program to study temporal treatment effects. The last follow-up measurement takes place almost three years after the completion of the programme, once the studied children move from primary to middle school.
 
 The first experimental task used for the evaluation was a multiple price list (MPL) task, where children chose between receiving two gifts today and two to ten gifts to be received in one week or two weeks, with the amount that successfully induces a child to wait used as a measure of patience. The second task was a convex time budget (CTB) task where children choose between the same gifts but allocate interest-paying tokens between current and future options. These tasks are repeated with two different time frames, comparing gifts received in the current or recent time period and gifts one week from this, or comparing gifts received one week from the current time period with gifts received two weeks from the current time period. This is used to assess dynamic consistencies of behaviour The authors also used an experimental task to assess risk aversion, having students allocate tokens to risky and safe options. All groups completed these tasks, and all experimenters except for the authors did not know the treatment status of each group when evaluating them which is important to not allow the treatment or control status of a group to influence how the programming is implemented. However, since the authors were also responsible for doing some training and doing some work to run the experiments in classrooms, I think that it would be an improvement to the paper if they also did not know which classrooms belonged to which groups. I think could do this by somehow pseudonymising the way they contact teachers.
 
-This paper uses a simple linear model with a vector of observable control characteristics: gender, baseline academic ability, SES, patience, risk tolerance, and cognitive ability. In the first evaluation phase, only the IT group is treated. The PC and CT groups are the control group. At this phase, they use the MPL task so that the estimation equation is given by 
+This paper uses a simple linear model with a vector of observable control characteristics: gender, baseline academic ability, SES, patience, risk tolerance, and cognitive ability. In the first evaluation phase, only the IT group is treated. The PC and CT groups are the control group. At this phase, they use the MPL task so that the estimation equation is given by
 
-  $\text{MPL}_{ij} = \alpha_{0}^{MPL} + \alpha_{1}^{MPL} IT_{j} + X'_{ij}\gamma^{MPL} + \epsilon_{ij}$
+$\text{MPL}_{ij} = \alpha_{0}^{MPL} + \alpha_{1}^{MPL} IT_{j} + X'_{ij}\gamma^{MPL} + \epsilon_{ij}$
 
 In the second, third, and long-term follow-up phases, both the IT and CT groups are treated so that the PC group is the control group. They estimate a treatment effect by combining the IT and CT groups and then estimate the treatment effects separately for the two groups using the CTB task. These are represented by the following equations, respectively (for student i in school j):
 
-  $\text{CTB}_{ij} = \alpha_{0}^{CTB} + \alpha_{1}^{CTB} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTB} + \nu_{ij}$
+$\text{CTB}_{ij} = \alpha_{0}^{CTB} + \alpha_{1}^{CTB} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTB} + \nu_{ij}$
 
-  $\text{CTB}_{ij} = \alpha_{0}^{CTB} + \alpha_{1}^{CTB} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTB} + \nu_{ij}$
-  
+$\text{CTB}_{ij} = \alpha_{0}^{CTB} + \alpha_{1}^{CTB} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTB} + \nu_{ij}$
+
 Due to the randomised control experiment design, treatment assignment is statistically independent of unobserved determinants of the outcome, so the treatment effects are estimated by $\alpha_{1}^{MPL}$, $\alpha_{1}^{CTB}$, $\alpha_{2}^{CTB}$, or $\alpha_{2}^{CTB}$, the estimated coefficients on the treatment dummy or dummies, depending on what task is used. The reason they switched tasks after the first phase was to avoid children making choices purely out of a desire for consistency. I think this approach could have also been done in the third and fourth evaluations using another child-appropriate experimental task. Another option would be to have the same tasks but different rewards so that the children would not be able to easily repeat their actions. That way, the later evaluations would also not be impacted by students wanting to appear consistent. Since teachers were only responsible for implementing the teaching materials, the authors were trying to avoid teachers hearing about the task from their students and subsequently influencing how the student behave in later evaluations. I believe that introducing new tasks for all evaluations could have been a simple way to avoid this.
 
 They found that treated students were more patient in the experimental tasks, more frequently choosing to delay consumption for subsequent interest payments, and their administrative records were less likely to indicate poor behaviour up to one year after the programme compared to the control counterparts. They estimate heterogeneous treatment effects by gender, initial family socioeconomic standing, and initial academic standing, finding that short-term impacts are more uniform while long term results were more persistent up to the second follow-up period after the treatment for girls and academically-stronger students. The outcomes that they measure are performance in the MPL and CTB tasks. Although the authors do not explicitly attempt to distinguish between the three mechanisms through which the treatment impacts intertemporal allocations, especially the distinction between time preferences and signalling, they indicate that they do not find evidence of the treatment impacting risk attitudes, providing some evidence of changes in time preferences.
@@ -45,7 +45,7 @@ library(broom)
 library(modelsummary)
 
 # location of data
-wd = '/Users/em/desktop/school/erm/replication/'
+wd = '/Users/emilyfu/Desktop/school/erm/replication/'
 
 # import data
 patiencedata = read_dta(paste0(wd, 'patiencedata.dta'))
@@ -72,8 +72,8 @@ plot_group = function(data, group_name) {
     # for the estimated treatment effect
     geom_point(size = 3, show.legend = FALSE) +
     # for the CIs\
-    geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), 
-                   height = 0.2, linewidth = 1, show.legend = FALSE) +
+    geom_errorbar(aes(xmin = conf.low, xmax = conf.high), 
+                   width = 0.2, linewidth = 1, show.legend = FALSE) +
     labs(x='Treatment effect (with 95% CIs)',
          y='School Type', 
          title=group_name) +
@@ -241,20 +241,17 @@ patiencedataclean = patiencedataclean |>
          ipw = 1/prob1)
 ```
 
-Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means. The variables in the summary statistics table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group. For instance, the specifications for `male` and `tage` are 
+Table 2 is the table of summary statistics that this paper includes, although it is actually used to demonstrate the balance of the dataset. To create this table, Alan and Ertac ran OLS regressions of several variables on the two treatment dummies corresponding to the two treatment groups. Since they run this on the two dummy variables, they end up with differences of sample means. The variables in the summary statistics table are `male` (dummy for male student), `behaviour_score` (behaviour 1-5), `success` (academic standing 1-5), `wealth` (family SES 1-5), `raven` (normalised cognitive score), `indrisk1` (risk tolerance 1-5) `math_score` (math score 1-5), `tmale` (dummy for male teacher), and `tage` (teacher age). `tr16` is the dummy to indicate being in the initially-treated (IT) group and `tr8` is the dummy to indicate being in the control-then-treatment (CT) group. For instance, the specifications for `male` and `tage` are
 
-  $\text{male}_{ij} = \beta_{0}^{male} + \beta_{1}^{male} IT_{j} +\beta_{2}^{male} CT_{j} + u_{ij}^{male}$
-  
-  $\text{tage}_{ij} = \beta_{0}^{tage} + \beta_{1}^{tage} IT_{j} +\beta_{2}^{tage} CT_{j} + u_{ij}^{male}$
+$\text{male}_{ij} = \beta_{0}^{male} + \beta_{1}^{male} IT_{j} +\beta_{2}^{male} CT_{j} + u_{ij}^{male}$
+
+$\text{tage}_{ij} = \beta_{0}^{tage} + \beta_{1}^{tage} IT_{j} +\beta_{2}^{tage} CT_{j} + u_{ij}^{male}$
 
 This table shows that the differences between the PC group and the IT/CT groups are not statistically significant, so the dataset is balanced across the three groups and then we know that we can compare them.
+
 ```{r echo=FALSE}
 table2_vars = c('male', 'behaviour_score', 'success', 'wealth', 'raven',
                 'indrisk1', 'math_score', 'tmale', 'tage')
-
-# this is me giving up on making the table exactly like the paper
-# the code i had before is so cumbersome
-# i'd rather have clean code and a table that provides the same estimates
 
 # store all the estimates and differences in this
 table_2 = tibble()
@@ -289,11 +286,12 @@ print(table_2)
 
 Table 4 shows that there is no evidence on the treatment impacting risk attitudes measured after the completion of the programme. It regresses a normalised categorical measure of a child's risk aversion on the treatment dummies, although they do not provide details on how this measure is constructed. This is also estimated for both treatment groups together and separate with the list of controls:
 
-  $\text{stpostrisk}_{ij} = \alpha_{0}^{stpostrisk} + \alpha_{1}^{stpostrisk} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{stpostrisk} + u_{ij}^{stpostrisk}$
-  
-  $\text{stpostrisk}_{ij} = \alpha_{0}^{stpostrisk} + \alpha_{1}^{stpostrisk} IT_{j} + \alpha_{2}^{stpostrisk} CT_{j} + X'_{ij}\gamma^{stpostrisk} + u_{ij}^{stpostrisk}$
-  
+$\text{stpostrisk}_{ij} = \alpha_{0}^{stpostrisk} + \alpha_{1}^{stpostrisk} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{stpostrisk} + u_{ij}^{stpostrisk}$
+
+$\text{stpostrisk}_{ij} = \alpha_{0}^{stpostrisk} + \alpha_{1}^{stpostrisk} IT_{j} + \alpha_{2}^{stpostrisk} CT_{j} + X'_{ij}\gamma^{stpostrisk} + u_{ij}^{stpostrisk}$
+
 We see that these estimated treatment effects are not significantly different from zero, which means that risk aversion in the children does not appear to be impacted by the treatment.
+
 ```{r echo=FALSE}
 # first run on all treated
 spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm + 
@@ -339,18 +337,18 @@ modelsummary(model_list_table4,
              estimate='{estimate}{stars}',
              statistic='({std.error})', # standard errors in brackets
              stars=c('*' = 0.1, '**' = 0.05, '***' = 0.01),
-             gof_omit='R2|Adj|Std.Errors', # removes unneccesary stuff
+             gof_omit='R2|Adj|Std.Errors', # removes things not included in paper
              add_rows=controlmean_table4, # add the custom row
              output='markdown',
-             # significance stars (idk why mine disappeared?)
+             # significance stars
              notes = '* p < 0.1, ** p < 0.05, *** p < 0.01')
 ```
 
 Table 5 shows the treatment effect of the first experiment, the MPL task, measured during the first evaluation phase. This task has the IT group as the treatment group and the CT and PC groups as the control group. The outcome variables are the trade-offs that the students make in the task, that is, how many more gifts they would require to be compensated with to wait an extra week from the early date or an extra week from the week after the early date, rather than receiving them at the early date:
 
-  $\text{MPL1}_{ij} = \alpha_{0}^{MPL1} + \alpha_{1}^{MPL1} IT_{j} + X'_{ij}\gamma^{MPL1} + u_{ij}^{MPL1}$
-  
-  $\text{MPL2}_{ij} = \alpha_{0}^{MPL2} + \alpha_{1}^{MPL2} IT_{j} + X'_{ij}\gamma^{MPL2} + u_{ij}^{MPL2}$
+$\text{MPL1}_{ij} = \alpha_{0}^{MPL1} + \alpha_{1}^{MPL1} IT_{j} + X'_{ij}\gamma^{MPL1} + u_{ij}^{MPL1}$
+
+$\text{MPL2}_{ij} = \alpha_{0}^{MPL2} + \alpha_{1}^{MPL2} IT_{j} + X'_{ij}\gamma^{MPL2} + u_{ij}^{MPL2}$
 
 We see that the treated children require less "compensation" in the form of gifts to be convinced to delay gratification for one week or two weeks. These effects are significant at the 0.1% level.
 
@@ -427,15 +425,15 @@ modelsummary(model_list_table5,
 
 Table 6 shows treatment effects measured in the second phase using the CTB task. These are called the medium-term outcomes in the paper for at least the IT group, compared to the short-term outcomes for the IT group in Table 5. However, they are short-term outcomes for the CT group. Now, Alan and Ertac estimate treatment effects for the two groups IT and CT as well as for the two groups by themselves. The control group is the PC group. Similarly to the first phase, the outcome variables are the trade-offs that the students make in the task. In this case, they estimate treatment effects with a low interest rate, $r=0.25$ and a high interest rate, $r=0.5$ on how many tokens a child allocated to the early date (the date that doesn't pay interest):
 
-  $\text{CTBlow}_{ij} = \alpha_{0}^{CTBlow} + \alpha_{1}^{CTBlow} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBlow} + \nu_{ij}^{CTBlow}$
+$\text{CTBlow}_{ij} = \alpha_{0}^{CTBlow} + \alpha_{1}^{CTBlow} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBlow} + \nu_{ij}^{CTBlow}$
 
-  $\text{CTBlow}_{ij} = \alpha_{0}^{CTBlow} + \alpha_{1}^{CTBlow} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBlow} + \nu_{ij}^{CTBlow}$
+$\text{CTBlow}_{ij} = \alpha_{0}^{CTBlow} + \alpha_{1}^{CTBlow} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBlow} + \nu_{ij}^{CTBlow}$
 
-  $\text{CTBhigh}_{ij} = \alpha_{0}^{CTBhigh} + \alpha_{1}^{CTBhigh} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBhigh} + \nu_{ij}^{CTBhigh}$
+$\text{CTBhigh}_{ij} = \alpha_{0}^{CTBhigh} + \alpha_{1}^{CTBhigh} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBhigh} + \nu_{ij}^{CTBhigh}$
 
-  $\text{CTBhigh}_{ij} = \alpha_{0}^{CTBhigh} + \alpha_{1}^{CTBhigh} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBhigh} + \nu_{ij}^{CTBhigh}$
+$\text{CTBhigh}_{ij} = \alpha_{0}^{CTBhigh} + \alpha_{1}^{CTBhigh} (IT_{j} + CT_{j}) + X'_{ij}\gamma^{CTBhigh} + \nu_{ij}^{CTBhigh}$
 
-Children in both treatment groups tend to allocate less tokens to the early date in favour of receiving interest for allocations in the later date, and this is true for both the high and low interest rates. The IT and CT groups were treated at different times but have very similar estimated treatment effects for both the interest rates, which Alan and Ertac interpret as a persistent treatment effect for the IT group. I think that the paper could benefit here from a brief discussion of why the treatment effects for low interest rate and high interest rates appear to be very similar, with the high interest rate even having lower treatment effects, meaning that treated children on average allocate more tokens to the interest-earning date in the high-interest-rate case, but not as much as they allocate in the low-interest-rate case. Maybe this is because at some point the gifts purchased with the tokens have decreasing utility, so the children are seeking some kind of bliss point, but I don't know.
+Children in both treatment groups tend to allocate less tokens to the early date in favour of receiving interest for allocations in the later date, and this is true for both the high and low interest rates. The IT and CT groups were treated at different times but have very similar estimated treatment effects for both the interest rates, which Alan and Ertac interpret as a persistent treatment effect for the IT group. I think that the paper could benefit here from a brief discussion of why the treatment effects for low interest rate and high interest rates appear to be very similar, with the high interest rate even having lower treatment effects, meaning that treated children on average allocate more tokens to the interest-earning date in the high-interest-rate case, but not as much as they allocate in the low-interest-rate case. This may be suggestive of a bliss point of gifts, with some point at which gifts purchased with the tokens have decreasing utility.
 
 ```{r echo=FALSE}
 # regress on one week and two week compensations
@@ -560,7 +558,8 @@ modelsummary(model_list_table6,
 
 Table 7 also shows treatment effects measured in the second phase using the CTB task, but distinguishes between one-week delays starting from the current date and starting from the following week. Like in Table 6, Alan and Ertac estimate treatment effects for the two groups IT and CT as well as for the two groups by themselves. The control group is the PC group. In Table 7, they estimate treatment effects with a low interest rate, $r=0.25$ and a high interest rate, $r=0.5$ but this time, the outcome is how many tokens a child allocated to the date a week past the early date versus the date two weeks past the early date, giving a comparison of one-week- versus two-weeks-from-present treatment effect
 
-We once again see that children in both treatment groups tend to allocate less tokens to the earlier date in favour of receiving interest for allocations in the later date, and this is true and statistically significant for both the high and low interest rates. 
+We once again see that children in both treatment groups tend to allocate less tokens to the earlier date in favour of receiving interest for allocations in the later date, and this is true and statistically significant for both the high and low interest rates.
+
 ```{r echo=FALSE}
 # regress on one week and two week compensations
 
@@ -684,9 +683,10 @@ modelsummary(model_list_table7,
 
 # Figure 3: Comparing persistence of treatment effects for different groups
 
-Alan and Ertac include some heterogeneity analysis by estimating treatment effects separately for boys and girls, children of lower and higher socioeconomic standing, and children of lower and higher academic standing. They use the data collected for the last follow-up (when the children are in middle school) to see the differences in persistence of treatment effects between groups. The heterogeneity analysis part of the paper is the one that I had the most trouble replicating and my results tend to be different from the ones presented in the paper. This is likely because I may be using the wrong socioeconomic and academic standing variables to filter my data, and also can't add these two variables to any of my regressions as covariates like I am supposed to do without making the results even more different to the ones in the paper. 
+Alan and Ertac include some heterogeneity analysis by estimating treatment effects separately for boys and girls, children of lower and higher socioeconomic standing, and children of lower and higher academic standing. They use the data collected for the last follow-up, when the children are in middle school, to see the differences in persistence of treatment effects between groups. The heterogeneity analysis part of the paper is the one that I had the most trouble replicating and my results tend to be different from the ones presented in the paper. It is possible the authors may have specified different socioeconomic and academic standing categories to filter the data.
 
 This part of the figure shows treatment effects for children whose choices classify them as following exponential (discount rate is constant over time), hyperbolic (more patient over short horizons than long ones), or hypobolic discounting (more patient over long horizons than short ones. The latter two represent what Alan and Ertac call children with dynamic inconsistency. This is measured by comparing choices made in the now-versus-one-week decision and the one-week-versus-two-weeks decision. The short term treatment is most effective for children who are hyperbolic, or present-biased in the sense that they display long-term impatience. In the paper, they find that long-term treatment effects only persist for those with exponential discounting, but because I am using a slightly different set of covariates I find that those with exponential and hyperbolic discounting have persistent effects.
+
 ```{r echo=FALSE}
 # elementary school exponential preferences
 spec11a = lm_robust(convex3 ~ tr8 + time1,
@@ -754,7 +754,7 @@ treatmenteffects_pref = bind_rows(
   get_treatment_ci(model=spec22c, group='Hypobolic', 
                    school_type='Middle School', treatment='tr8'))
 
-# Create individual plots
+# create individual plots
 exp_plot = plot_group(data=treatmenteffects_pref, group_name='Exponential')
 
 hyp_plot = plot_group(data=treatmenteffects_pref, group_name='Hyperbolic')
@@ -768,6 +768,7 @@ hypo_plot = plot_group(data=treatmenteffects_pref, group_name='Hypobolic')
 ```
 
 Here, I find that treatment effects are persistent for only those with high academic standing as initially measured, while their short-term treatment effects are nearly insignificant. For the students with low academic standing, the short-term treatment effects are significant but dissipate in middle school. This is the same result found by the authors in the corresponding part of the heterogeneity analysis.
+
 ```{r echo=FALSE}
 # elementary school, high academic standing
 spec1a_educ = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
@@ -825,7 +826,8 @@ low_educ_plot = plot_group(data=treatmenteffects_educ,
 high_educ_plot + low_educ_plot
 ```
 
-Another part of the figure estimates treatment effects and persistence for girls and boys separately. This part of the replication is where my results differ from those in the paper. For girls, the treatment effect does not appear to be significant nor persistent, whereas for boys it is. This is not the case in the paper findings themselves. 
+Another part of the figure estimates treatment effects and persistence for girls and boys separately. This part of the replication is where my results differ from those in the paper. For girls, the treatment effect does not appear to be significant nor persistent, whereas for boys it is. This is not the case in the paper findings themselves.
+
 ```{r echo=FALSE}
 # these don't include male as a covariate because we're doing male = 0 and 1
 # separately
@@ -876,13 +878,14 @@ treatmenteffects_gender = bind_rows(
 # boys plot
 boys_plot = plot_group(data=treatmenteffects_gender, group_name='Boys')
 
-# Create plot for Girls
+# girls plot
 girls_plot = plot_group(data=treatmenteffects_gender, group_name='Girls')
 
 boys_plot + girls_plot
 ```
 
 Finally, the authors estimate treatment effects for those initially measured with high or low family SES. For students with low SES, only long-term effects are significant, while the opposite is true for students with high SES.
+
 ```{r echo=FALSE}
 # elementary school
 spec1a_ses = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
@@ -939,6 +942,7 @@ high_ses_plot + low_ses_plot
 # Appendix
 
 ## importing packages and setting parameters
+
 ```{r message=FALSE, eval=FALSE}
 library(tidyverse)
 library(haven)
@@ -957,6 +961,7 @@ patiencedata = read_dta(paste0(wd, 'patiencedata.dta'))
 ```
 
 ## Functions
+
 ```{r eval=FALSE}
 # for heterogeneity analysis: extract estimated coefficient and CIs
 get_treatment_ci = function(model, group, school_type, treatment='allt') {
@@ -969,11 +974,11 @@ get_treatment_ci = function(model, group, school_type, treatment='allt') {
 # for heterogeneity analysis: plot figures
 plot_group = function(data, group_name) {
   
-  # Filter data for the specific group
+  # filter data for the specific group
   plot_data = data |> 
     filter(group == group_name)
   
-  # Create the plot
+  # create the plot
   ggplot(plot_data, aes(x = estimate, y = school_type, color = school_type)) +
     # for that zero line
     geom_vline(xintercept = 0) +
@@ -990,6 +995,7 @@ plot_group = function(data, group_name) {
 ```
 
 ## Creating some variables (creating dummies, destringing, etc)
+
 ```{r eval=FALSE}
 patiencedataclean = patiencedata |>
   
@@ -1084,15 +1090,12 @@ patiencedataclean = patiencedata |>
                            TRUE ~ NA_real_)) |>
   
   # average patience calculated from convex preference variables
-  mutate(
-    avgctb = ifelse(
-      !is.na(Convex1) & !is.na(Convex2) & !is.na(Convex3) & !is.na(Convex4),
-      (Convex1 + Convex2 + Convex3 + Convex4)/4, 
-      NA_real_),
-    avgctb1 = ifelse(
-      !is.na(Convex1) & !is.na(Convex3),
-      (Convex1 + Convex3)/2, 
-      NA_real_)) |>
+  mutate(avgctb = ifelse(!is.na(Convex1) & !is.na(Convex2) & !is.na(Convex3) & !is.na(Convex4),
+                         (Convex1 + Convex2 + Convex3 + Convex4)/4, 
+                         NA_real_),
+         avgctb1 = ifelse(!is.na(Convex1) & !is.na(Convex3),
+                          (Convex1 + Convex3)/2, 
+                          NA_real_)) |>
   
   # more time consistency dummies with appropriate NAs 
   # using other experimental task
@@ -1134,11 +1137,11 @@ patiencedataclean = patiencedata |>
          otimevar = ifelse(!is.na(otime1) | !is.na(otime2) | 
                              !is.na(otime3) | !is.na(otime4), 1, NA),
          # also get averages
-         oavgctb = (otime1 + otime2 + otime3 + otime4)/4
-  )
+         oavgctb = (otime1 + otime2 + otime3 + otime4)/4)
 ```
 
 ## Inverse probability weights
+
 ```{r eval=FALSE}
 # school attrition variable
 patiencedataclean = patiencedataclean |>
@@ -1156,15 +1159,12 @@ patiencedataclean = patiencedataclean |>
 ```
 
 ## Code for Table 2
+
 ```{r eval=FALSE}
 table2_vars = c('male', 'behaviour_score', 'success', 'wealth', 'raven',
                 'indrisk1', 'math_score', 'tmale', 'tage')
 
-# this is me giving up on making the table exactly like the paper
-# the code i had before is so cumbersome
-# i'd rather have clean code and a table that provides the same estimates
-
-# store all the estimates and differences in this
+# store all the estimates and differences in empty dataframe
 table_2 = tibble()
 
 # run regression for each variable listed
@@ -1194,6 +1194,7 @@ print(table_2)
 ```
 
 ## Code for Table 4
+
 ```{r eval=FALSE}
 # first run on all treated
 spec1 = lm_robust(stpostrisk ~ allt + male + mrisk + ravenm + 
@@ -1247,6 +1248,7 @@ modelsummary(model_list_table4,
 ```
 
 ## Code for Table 5
+
 ```{r eval=FALSE}
 # first regress short term time difference
 spec3 = lm_robust(time1 ~ tr16 + male + mrisk + ravenm  +
@@ -1319,6 +1321,7 @@ modelsummary(model_list_table5,
 ```
 
 ## Code for Table 6
+
 ```{r eval=FALSE}
 # regress on one week and two week compensations
 
@@ -1441,6 +1444,7 @@ modelsummary(model_list_table6,
 ```
 
 ## Code for Table 7
+
 ```{r eval=FALSE}
 # regress on one week and two week compensations
 
@@ -1554,7 +1558,7 @@ modelsummary(model_list_table7,
              estimate='{estimate}{stars}',
              statistic='({std.error})', # standard errors in brackets
              stars=c('*' = 0.1, '**' = 0.05, '***' = 0.01),
-             gof_omit='R2|Adj|Std.Errors', # removes unneccesary stuff
+             gof_omit='R2|Adj|Std.Errors', # remove things that aren't in table
              add_rows=extras_table7, # add the custom rows
              output='markdown',
              # significance stars (idk why mine disappeared?)
@@ -1563,6 +1567,7 @@ modelsummary(model_list_table7,
 ```
 
 ## Heterogeneity by preverence reversal types
+
 ```{r eval=FALSE}
 # elementary school exponential preferences
 spec11a = lm_robust(convex3 ~ tr8 + time1,
@@ -1644,6 +1649,7 @@ hypo_plot = plot_group(data=treatmenteffects_pref, group_name='Hypobolic')
 ```
 
 ## Heterogeneity by academic standing
+
 ```{r eval=FALSE}
 # elementary school, high academic standing
 spec1a_educ = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
@@ -1702,8 +1708,9 @@ high_educ_plot + low_educ_plot
 ```
 
 ## Heterogeneity by gender
+
 ```{r eval=FALSE}
-# these don't include male as a covariate because we're doing male = 0 and 1
+# these don't include male as a covariate because we're doing male == 0 and 1
 # separately
 
 # elementary school
@@ -1752,13 +1759,14 @@ treatmenteffects_gender = bind_rows(
 # boys plot
 boys_plot = plot_group(data=treatmenteffects_gender, group_name='Boys')
 
-# Create plot for Girls
+# girls plot
 girls_plot = plot_group(data=treatmenteffects_gender, group_name='Girls')
 
 boys_plot + girls_plot
 ```
 
 ## Heterogeneity by socioeconomic standing
+
 ```{r eval=FALSE}
 # elementary school
 spec1a_ses = lm_robust(convex3 ~ allt + male + mrisk + ravenm + 
