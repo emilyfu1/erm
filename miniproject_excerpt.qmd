@@ -434,7 +434,7 @@ modelsummary(model_list_table6,
 
 Alan and Ertac include heterogeneity analysis by estimating treatment effects separately for boys and girls, children of lower and higher socioeconomic standing, and children of lower and higher academic standing. They use the data collected for the last follow-up, when the children are in middle school, to see the differences in persistence of treatment effects between groups. The heterogeneity analysis part of the paper is the one that I had the most trouble replicating and my results tend to be different from the ones presented in the paper. It is possible the authors may have specified different socioeconomic and academic standing categories to filter the data.
 
-This part of the figure shows treatment effects for children whose choices classify them as following exponential (discount rate is constant over time), hyperbolic (more patient over short horizons than long ones), or hypobolic discounting (more patient over long horizons than short ones. The latter two represent what Alan and Ertac call children with dynamic inconsistency. This is measured by comparing choices made in the now-versus-one-week decision and the one-week-versus-two-weeks decision. The short term treatment is most effective for children who are hyperbolic, or present-biased in the sense that they display long-term impatience. 
+This part of the figure shows treatment effects for children whose choices classify them as following exponential (discount rate is constant over time), hyperbolic (more patient over short horizons than long ones), or hypobolic discounting (more patient over long horizons than short ones. The latter two represent what Alan and Ertac call children with dynamic inconsistency. This is measured by comparing choices made in the now-versus-one-week decision and the one-week-versus-two-weeks decision. The short term treatment is most effective for children who are hyperbolic, or present-biased in the sense that they display long-term impatience.
 
 ```{r echo=FALSE}
 # elementary school exponential preferences
@@ -517,8 +517,6 @@ hypo_plot = plot_group(data=treatmenteffects_pref, group_name='Hypobolic')
 ```
 
 # Selected code
-
-## Importing packages and setting parameters
 
 ## Functions
 
